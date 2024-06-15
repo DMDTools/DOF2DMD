@@ -1,0 +1,30 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.userosscache
+
+# User-specific files
+*.sln.docstates
+
+# NuGet packages
+*.nupkg
+packages/
+
+# Windows files
+Thumbs.db
+Desktop.ini
+
+# Logs
+logs/
+*.log
+
+# Other
+.idea/
+
+# Dependencies
+FlexDMD.dll
