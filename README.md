@@ -30,12 +30,7 @@ uses [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
 
 ## Setup
 
-- Install [FlexDMD](https://github.com/vbousquet/flexdmd)
-- Install [DMD Extensions](https://github.com/freezy/dmd-extensions)
-- If using DOFLinx for MAME
-  - Install [DOFLinx](https://www.vpforums.org/index.php?showforum=104)
-  - Get [modified MAME version](https://drive.google.com/drive/folders/1AjJ8EQo3AkmG2mw7w0fLzF9HcOjFoUZH)
-- Install DOF2DMD
+- Download DOF2DMD from [Release section](https://github.com/ojacques/DOF2DMD/releases), create a folder and extract the content of the archive in this folder
 - Tweak `settings.ini` if needed:
 
     ```ini
@@ -54,9 +49,11 @@ uses [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
     ```
 - Launch DOF2DMD
 - You should see the DOF2DMD logo, either on a Virtual DMD, or real DMD if you have configured `DmdDevice.ini`
-- If using DOFLinx for MAME :
+- If using DOFLinx for MAME
+  - Install [DOFLinx](https://www.vpforums.org/index.php?showforum=104)
+  - Get [modified MAME version](https://drive.google.com/drive/folders/1AjJ8EQo3AkmG2mw7w0fLzF9HcOjFoUZH)
   - Launch DOFLinx (should be at startup if you are on an Arcade cabinet).
-  - Launch your MAME Game. The modified version of MAME will communicate with
+  - Launch your MAME game. The modified version of MAME will communicate with
     DOFLinx, which in turn will trigger API calls to DOF2DMD.
 - Enjoy!
 
