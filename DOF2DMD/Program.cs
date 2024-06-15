@@ -77,6 +77,7 @@ class Program
         // Initialize the timer
         _sceneQueueTimer = new Timer(SceneTimer, null, 1000, 1000);
 
+        Trace.WriteLine($"URL Prefix: {AppSettings.UrlPrefix}");
         HttpListener listener = new HttpListener();
         listener.Prefixes.Add($"{AppSettings.UrlPrefix}/");
         listener.Start();
@@ -117,22 +118,23 @@ class Program
 
         static AppSettings()
         {
-            var builder = new ConfigurationBuilder()
-                .AddIniFile("settings.ini", optional: true, reloadOnChange: true);
+            var builder = new ConfigurationBuilder();
+            builder.SetBasePath(Directory.GetCurrentDirectory());
+            builder.AddIniFile("settings.ini", optional: true, reloadOnChange: true);
 
             _configuration = builder.Build();
         }
 
-        public static string UrlPrefix => _configuration["url_prefix"];
-        public static string SceneDefault => _configuration["scene_default"];
-        public static int NumberOfDmd => Int32.Parse(_configuration["number_of_dmd"]);
-        public static int AnimationDmd => Int32.Parse(_configuration["animation_dmd"]);
-        public static int ScoreDmd => Int32.Parse(_configuration["score_dmd"]);
-        public static int marqueeDmd => Int32.Parse(_configuration["marquee_dmd"]);
-        public static bool pixelCadeEmu => Boolean.Parse(_configuration["pixelcade_emu"]);
-        public static int displayScoreDuration => Int32.Parse(_configuration["display_score_duration_s"]);
-        public static bool Debug => Boolean.Parse(_configuration["debug"]);
-        public static string artworkPath => _configuration["artwork_path"];
+        public static string UrlPrefix => _configuration["url_prefix"] ?? "http://127.0.0.1:8080";
+        public static string SceneDefault => _configuration["scene_default"] ?? "marquee";
+        public static int NumberOfDmd => Int32.Parse(_configuration["number_of_dmd"] ?? "1");
+        public static int AnimationDmd => Int32.Parse(_configuration["animation_dmd"] ?? "1");
+        public static int ScoreDmd => Int32.Parse(_configuration["score_dmd"] ?? "1");
+        public static int marqueeDmd => Int32.Parse(_configuration["marquee_dmd"] ?? "1");
+        public static bool pixelCadeEmu => Boolean.Parse(_configuration["pixelcade_emu"] ?? "true");
+        public static int displayScoreDuration => Int32.Parse(_configuration["display_score_duration_s"] ?? "4");
+        public static bool Debug => Boolean.Parse(_configuration["debug"] ?? "true");
+        public static string artworkPath => _configuration["artwork_path"] ?? "artwork";
     }
 
     public struct ImageInfo
