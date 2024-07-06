@@ -80,8 +80,8 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
   - **animated**: A boolean flag indicating whether the file must be forced to fixed (not a gif)
   - **duration**: The duration in milliseconds for which the image or video should be displayed
 - `[url_prefix]/v1/display/score?player=<player>&score=<score>`
-  - **player**: The identifier of the player whose score is being displayed (PLAYER 1, PLAYER 2)
-  - **score**: The score value to be displayed
+  - **player**: optional : the identifier of the player whose score is being displayed (1, 2, 3 or 4)
+  - **score**: The score value to be displayed for active player
 - `[url_prefix]/v1/blank`
   - This endpoint clears or blanks the display
 - `[url_prefix]/v1/exit`
@@ -110,6 +110,17 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
   - **animatein**: The animation effect for the scene entrance, ranging from 0 to 15
   - **animateout**: The animation effect for the scene exit, ranging from 0 to 15
   - **pausetime**: The duration in milliseconds for which the scene should be displayed
+
+## Testing
+
+Once DOF2DMD is started, you can use your browser to test it:
+
+- Show version [http://127.0.0.1:8080/v1/version](http://127.0.0.1:8080/v1/version) 
+- Display picture in the artwork folder, subfolder `mame`, picture `galaga`: [http://127.0.0.1:8080/v1/display/picture?path=mame/galaga](http://127.0.0.1:8080/v1/display/picture?path=mame/galaga) 
+- Set score of player 1 (default) to 1000: [http://127.0.0.1:8080/v1/display/score?score=1000](http://127.0.0.1:8080/v1/display/score?score=1000)
+- Set active player to player 2 and set score to 2000: [127.0.0.1:8080/v1/display/score?player=2&score=2000](127.0.0.1:8080/v1/display/score?player=2&score=2000)
+- Blank the DMD [http://127.0.0.1:8080/v1/blank](http://127.0.0.1:8080/v1/blank)
+- Exit DOF2DMD [http://127.0.0.1:8080/v1/exit](http://127.0.0.1:8080/v1/exit)
 
 ## TODO
 

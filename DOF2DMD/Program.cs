@@ -486,7 +486,14 @@ class Program
                             break;
                         case "score":
                             // [url_prefix]/v1/display/score?player=<player>&score=<score>
+                            
                             string score = query.Get("score");
+                            if (query.Get("player") != null) {
+                                int player = int.Parse(query.Get("player"));
+                                if (player > gNbPlayers)
+                                    gNbPlayers = player;
+                                gActivePlayer = player;
+                            }
                             _lastDisplayScoreCall = DateTime.Now;
                             DisplayScore(score);
                             break;
