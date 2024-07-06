@@ -45,11 +45,7 @@ jobs:
 
       # Build artifacts
       - name: Build
-        run: |
-          for /f "delims=" %%a in ('git describe --tags --abbrev^=0 origin/main') do (
-            set VERSION=%%a
-          )
-          dotnet publish -r win-x64 --self-contained=false /p:PublishSingleFile=true dof2dmd/dof2dmd.csproj /p:Version=%VERSION%
+        run: dotnet publish -r win-x64 --self-contained=false /p:PublishSingleFile=true dof2dmd/dof2dmd.csproj /p:Version=${{ github.ref_name }}
       
       # Upload artifacts
       - name: Upload artifacts
