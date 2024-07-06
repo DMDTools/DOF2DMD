@@ -119,7 +119,7 @@ Once DOF2DMD is started, you can use your browser to test it:
 - Show version [http://127.0.0.1:8080/v1/version](http://127.0.0.1:8080/v1/version) 
 - Display picture in the artwork folder, subfolder `mame`, picture `galaga`: [http://127.0.0.1:8080/v1/display/picture?path=mame/galaga](http://127.0.0.1:8080/v1/display/picture?path=mame/galaga) 
 - Set score of player 1 (default) to 1000: [http://127.0.0.1:8080/v1/display/score?score=1000](http://127.0.0.1:8080/v1/display/score?score=1000)
-- Set active player to player 2 and set score to 2000: [127.0.0.1:8080/v1/display/score?player=2&score=2000](127.0.0.1:8080/v1/display/score?player=2&score=2000)
+- Set active player to player 2 and set score to 2000: [http://127.0.0.1:8080/v1/display/score?player=2&score=2000](http://127.0.0.1:8080/v1/display/score?player=2&score=2000)
 - Blank the DMD [http://127.0.0.1:8080/v1/blank](http://127.0.0.1:8080/v1/blank)
 - Exit DOF2DMD [http://127.0.0.1:8080/v1/exit](http://127.0.0.1:8080/v1/exit)
 
