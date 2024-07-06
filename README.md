@@ -30,6 +30,7 @@ uses [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
 
 ## Setup
 
+- Download and install dotnet 8 "Runtime desktop" from Microsoft: https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.6-windows-x64-installer
 - Download DOF2DMD from [Release section](https://github.com/ojacques/DOF2DMD/releases), create a folder and extract the content of the archive in this folder
 - Tweak `settings.ini` if needed:
 
