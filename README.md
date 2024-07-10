@@ -19,7 +19,7 @@ One big use case is to interface
 from [DDH69](https://www.vpforums.org/index.php?showuser=95623) to get the DMD
 to show animations while playing MAME.
 
-Here is how it looks with an emulated DMD (using Freezy DMD extensions):
+Here is how it looks like with an emulated DMD (using Freezy DMD extensions):
 
 ![1942](1942.gif)
 
@@ -36,17 +36,27 @@ uses [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
 
     ```ini
     ; Settings for DOF2DMD
-    url_prefix=http://127.0.0.1:8080    ; The URL that DOF2DMD will listen to
-    display_score_duration_s=4          ; Display the score for x seconds, then back to marquee
-    pixelcade_emu=true                  ; Pixelcade emulation mode
-    debug=true                          ; Verbose output in debug.log file
-    artwork_path=artwork                ; Path of the artwork (relative to DOF2DMD or absolute)
-    ;scene_default=marquee              ; Not implemented
-    ;number_of_dmd=1                    ; Not implemented
-    ;animation_dmd=1                    ; Not implemented
-    ;score_dmd=1                        ; Not implemented
-    ;marquee_dmd=1                      ; Not implemented
-    ;start_picture=                     ; Not implemented
+    ; The base URL that DOF2DMD will listen to. Defaults to http://127.0.0.1:8080
+    ;url_prefix=http://127.0.0.1:8080
+    ; Display the score for x seconds, then back to marquee. Defaults to 5 seconds.
+    ;display_score_duration_s=5
+    ; Verbose output in debug.log file if debug=true. Defaults to false.
+    ;debug=false
+    ; Path of the artwork (relative to DOF2DMD or absolute). Defaults to "artwork"
+    ;artwork_path=artwork
+    ; Width in pixels for DMD. Defaults to 128
+    ;dmd_width=128
+    ; Height in pixels for DMD. Defaults to 64
+    ;dmd_height=64
+    ; Picture to display when DOF2DMD starts. Defaults to DOF2DMD (that is artwork/DOF2DMD.png or DOF2DMD.gif)
+    ;start_picture=
+    ; Not implemented ---
+    ;scene_default=marquee
+    ;number_of_dmd=1
+    ;animation_dmd=1
+    ;score_dmd=1
+    ;marquee_dmd=1
+    
     ```
 - Launch DOF2DMD
 - You should see the DOF2DMD logo, either on a Virtual DMD, or real DMD if you have configured `DmdDevice.ini`
@@ -75,11 +85,10 @@ pixel perfect DMD artwork library.
 
 DOF2DMD is a server listening to simple http request. Once it has started, you can use the following :
 
-- `[url_prefix]/v1/display/picture?path=<path>?animated=true|false&duration=<duration in ms>`
+- `[url_prefix]/v1/display/picture?path=<path>?fixed=true|false`
   - Display an image or video
   - **path**: The file path of the image or video to be displayed
-  - **animated**: A boolean flag indicating whether the file must be forced to fixed (not a gif)
-  - **duration**: The duration in milliseconds for which the image or video should be displayed
+  - **fixed**: A boolean flag indicating whether the file must be forced to fixed (not a gif)
 - `[url_prefix]/v1/display/score?player=<player>&score=<score>`
   - **player**: optional : the identifier of the player whose score is being displayed (1, 2, 3 or 4)
   - **score**: The score value to be displayed for active player

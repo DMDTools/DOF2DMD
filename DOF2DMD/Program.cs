@@ -34,50 +34,48 @@ using System.Diagnostics;
 using FlexDMD;
 using System.IO;
 using System.Drawing.Imaging;
-using System.Collections.Generic;
 using System.Web;
-using System.Linq;
 using Microsoft.Extensions.Configuration;
 using System.Text;
 
 class Program
 {
-    public static FlexDMD.IFlexDMD gDmd;
-    public static FlexDMD.IUltraDMD gUdmd;
-    public static int[] gScore = new int[5] { 0, 0, 0, 0, 0 };
+    public static FlexDMD.IFlexDMD gDmdDevice;
+    public static FlexDMD.IUltraDMD gUDmdDevice;
+    public static int[] gScore = [0, 0, 0, 0, 0];
     public static int gActivePlayer = 1;
     public static int gNbPlayers = 1;
+    public static bool gScoreQueued = false;
     public static string gGameMarquee = "DOF2DMD";
-    private static Timer _sceneQueueTimer;
-    private static readonly object _sceneQueueLock = new object();
-    private static DateTime _lastDisplayScoreCall = DateTime.MinValue;
-    private static DateTime _lastDisplayScore = DateTime.MinValue;
-    private static readonly object _displayScoreLock = new object();
+    private static Timer _scoreTimer;
+    private static Timer _animationTimer;
+    private static readonly object _scoreQueueLock = new object();
+    private static readonly object _animationQueueLock = new object();
 
     static void Main(string[] args)
     {
         // Set up logging to a file
         Trace.Listeners.Add(new TextWriterTraceListener("debug.log") { TraceOutputOptions = TraceOptions.Timestamp });
-        //Trace.Listeners.Add(new ConsoleTraceListener() { TraceOutputOptions = TraceOptions.Timestamp });
         Trace.AutoFlush = true;
 
         // Initializing DMD
-        gDmd = new FlexDMD.FlexDMD
+        gDmdDevice = new FlexDMD.FlexDMD
         {
-            Width = 128,
-            Height = 32,
+            Width = AppSettings.dmdWidth,
+            Height = AppSettings.dmdHeight,
             GameName = "DOF2DMD",
             Color = Color.Aqua,
             RenderMode = RenderMode.DMD_RGB,
             Show = true,
             Run = true
         };
-        gUdmd = gDmd.NewUltraDMD();
+        gUDmdDevice = gDmdDevice.NewUltraDMD();
 
-        // Initialize the timer
-        _sceneQueueTimer = new Timer(SceneTimer, null, 1000, 1000);
+        // Display start picture as game marquee
+        gGameMarquee = AppSettings.StartPicture;
+        DisplayPicture(gGameMarquee, true);
 
-        Trace.WriteLine($"URL Prefix: {AppSettings.UrlPrefix}");
+        // Start the http listener
         HttpListener listener = new HttpListener();
         listener.Prefixes.Add($"{AppSettings.UrlPrefix}/");
         listener.Start();
@@ -88,30 +86,53 @@ class Program
         listenTask.GetAwaiter().GetResult();
     }
 
-    private static void SceneTimer(object state)
+    /// <summary>
+    /// Callback method once animation is finished.
+    /// Displays the player's score or the game marquee picture based on the state of gScoreQueued.
+    /// </summary>
+    private static void AnimationTimer(object state)
     {
-        LogIt("SceneTimer");
-        lock (_sceneQueueLock)
+        LogIt("⏱️ AnimationTimer");
+        lock (_animationQueueLock)
         {
-            // If score has not changed, we should display the Game Marquee
-            // Priority order : animation, score (if changed, and for X seconds), marquee
-            if (!gUdmd.IsRendering())
+            if (gUDmdDevice.IsRendering())
+                gUDmdDevice.CancelRendering();
+            _animationTimer.Dispose();
+            // Display score if gScoreQueued, or display marquee
+            if (gScoreQueued)
             {
-                // Display the marquee if the score has been displayed since more than configured seconds
-                if ((DateTime.Now - _lastDisplayScoreCall).TotalMilliseconds > AppSettings.displayScoreDuration * 1000)
-                {
-                    LogIt($"  ⏱️Displaying marquee {gGameMarquee} after score displayed for {AppSettings.displayScoreDuration}s");
-                    DisplayPicture(gGameMarquee, true, 99999);
-                }
-                else if (gScore[gActivePlayer] > 0)
-                {
-                    LogIt($"  ⏱️Displaying score {gScore[gActivePlayer].ToString()}");
-                    DisplayScore(gScore[gActivePlayer].ToString());
-                }
+                LogIt("  ⏱️ AnimationTimer: score queued, display it");
+                if (gScore[gActivePlayer] > 0)
+                    DisplayScore(gActivePlayer, gScore[gActivePlayer]);
+                gScoreQueued = false;
+            }
+            else
+            {
+                LogIt("  ⏱️ AnimationTimer: no score queued, restore game marquee");
+                DisplayPicture(gGameMarquee, true);
             }
         }
     }
 
+    /// <summary>
+    /// This method is a callback for a timer that displays the current score.
+    /// It then calls the DisplayPicture method to show the game marquee picture.
+    /// </summary>
+    private static void ScoreTimer(object state)
+    {
+        LogIt("⏱️ ScoreTimer");
+        lock (_scoreQueueLock)
+        {
+            DisplayPicture(gGameMarquee, true);
+            _scoreTimer.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// This class provides access to application settings stored in an INI file.
+    /// The settings are loaded from the 'settings.ini' file in the current directory.
+    /// If a setting is not found in the file, default values are provided.
+    /// </summary>
     public class AppSettings
     {
         private static IConfiguration _configuration;
@@ -126,15 +147,16 @@ class Program
         }
 
         public static string UrlPrefix => _configuration["url_prefix"] ?? "http://127.0.0.1:8080";
-        public static string SceneDefault => _configuration["scene_default"] ?? "marquee";
         public static int NumberOfDmd => Int32.Parse(_configuration["number_of_dmd"] ?? "1");
         public static int AnimationDmd => Int32.Parse(_configuration["animation_dmd"] ?? "1");
         public static int ScoreDmd => Int32.Parse(_configuration["score_dmd"] ?? "1");
         public static int marqueeDmd => Int32.Parse(_configuration["marquee_dmd"] ?? "1");
-        public static bool pixelCadeEmu => Boolean.Parse(_configuration["pixelcade_emu"] ?? "true");
-        public static int displayScoreDuration => Int32.Parse(_configuration["display_score_duration_s"] ?? "4");
-        public static bool Debug => Boolean.Parse(_configuration["debug"] ?? "true");
+        public static int displayScoreDuration => Int32.Parse(_configuration["display_score_duration_s"] ?? "5");
+        public static bool Debug => Boolean.Parse(_configuration["debug"] ?? "false");
         public static string artworkPath => _configuration["artwork_path"] ?? "artwork";
+        public static ushort dmdWidth => ushort.Parse(_configuration["dmd_width"] ?? "128");
+        public static ushort dmdHeight => ushort.Parse(_configuration["dmd_height"] ?? "32");
+        public static string StartPicture => _configuration["start_picture"] ?? "DOF2DMD";
     }
 
     public struct ImageInfo
@@ -146,6 +168,9 @@ class Program
         public int AnimationLength; // In milliseconds
     }
 
+    /// <summary>
+    /// Get image (gif info, including animation length)
+    /// </summary>
     public static ImageInfo GetImageInfo(string path)
     {
         ImageInfo info = new ImageInfo();
@@ -161,13 +186,12 @@ class Program
                     FrameDimension frameDimension = new FrameDimension(image.FrameDimensionsList[0]);
                     int frameCount = image.GetFrameCount(frameDimension);
                     int delay = 0;
-                    int this_delay = 0;
                     int index = 0;
 
                     for (int f = 0; f < frameCount; f++)
                     {
-                        this_delay = BitConverter.ToInt32(image.GetPropertyItem(20736).Value, index) * 10;
-                        delay += (this_delay < 100 ? 100 : this_delay);  // Minimum delay is 100 ms
+                        int this_delay = BitConverter.ToInt32(image.GetPropertyItem(20736).Value, index) * 10;
+                        delay += this_delay < 100 ? 100 : this_delay;  // Minimum delay is 100 ms
                         index += 4;
                     }
 
@@ -181,79 +205,8 @@ class Program
     }
 
     /// <summary>
-    /// Translates a PixelCade API call to a DOF2DMD API call.
+    /// Save debug message in file
     /// </summary>
-    /// <param name="pixelCadeUrl">The PixelCade API call URL to be translated.</param>
-    /// <returns>The translated DOF2DMD API call URL.</returns>
-    /// <exception cref="ArgumentException">Thrown when the PixelCade API call is not supported.</exception>
-    /// <remarks>
-    /// This function supports the following PixelCade API calls:
-    /// - stream: Translates to the DOF2DMD `display/picture` endpoint.
-    /// - text: Translates to the DOF2DMD `display/text` endpoint.
-    /// - score: Translates to the DOF2DMD `display/score` endpoint.
-    /// </remarks>
-    /// <example>
-    /// Example usage:
-    /// <code>
-    /// string pixelCadeUrl = "http://127.0.0.1:8080/arcade/stream/mameoutput/galaga_newship?l=1&ledonly";
-    /// string dof2dmdUrl = TranslatePixelCadeToDoF2DMD(pixelCadeUrl);
-    /// Console.WriteLine(dof2dmdUrl); // Output: [url_prefix]/v1/display/picture?path=mameoutput%2Fgalaga_newship&duration=1
-    /// </code>
-    /// </example>
-    public static string TranslatePixelCadeToDOF2DMD(string pixelCadeUrl)
-    {
-        if(pixelCadeUrl.Contains("/v1/")) {
-            // Does not look like PixelCade URL, just pass as is
-            return pixelCadeUrl;
-        }
-        var url = new Uri(pixelCadeUrl);
-        var query = HttpUtility.ParseQueryString(url.Query);
-
-        var dof2dmdUrl = $"{AppSettings.UrlPrefix}/v1/";
-        var dof2dmdParams = new Dictionary<string, string>();
-
-        switch (url.Segments[1].TrimEnd('/'))
-        {
-            case "arcade":
-                if (url.Segments[2].TrimEnd('/') == "stream")
-                {
-                    dof2dmdUrl += "display/picture";
-                    var path = string.Join("", url.Segments.Skip(3));
-                    dof2dmdParams["path"] = HttpUtility.UrlEncode(path);
-
-                    if (query["l"] != null)
-                        dof2dmdParams["duration"] = query["l"];
-
-                    if (pixelCadeUrl.Contains("nogif"))
-                        dof2dmdParams["fixed"] = "true";
-                }
-                break;
-
-            case "text":
-                dof2dmdUrl += "display/text";
-                dof2dmdParams["text"] = query["t"];
-                break;
-
-            case "score":
-                dof2dmdUrl += "display/score";
-                if (query["s"] != null)
-                {
-                    var score = query["s"];
-                    dof2dmdParams["score"] = score;
-                }
-                break;
-
-            default:
-                Trace.WriteLine("Unsupported PixelCade API call");
-                break;
-        }
-
-        var queryString = string.Join("&", dof2dmdParams.Select(kvp => $"{kvp.Key}={kvp.Value}"));
-
-        return $"{dof2dmdUrl}?{queryString}";
-    }
-
-    // Log only if debug is enabled
     public static void LogIt(string message)
     {
         // If debug is enabled
@@ -263,7 +216,11 @@ class Program
         }
     }
 
-    public static Boolean DisplayPicture(string path, bool bfixed, int duration)
+    /// <summary>
+    /// Displays an image file (GIF or PNG) on the DMD device.
+    /// Handles animation timers and file selection based on input parameters.
+    /// </summary>
+    public static Boolean DisplayPicture(string path, bool bfixed)
     {
         LogIt($"DisplayPicture {path}, fixed? {bfixed}");
         try
@@ -285,16 +242,19 @@ class Program
             else
                 fileToUse = File.Exists(gifPath) ? gifPath : pngPath;
             int gifDuration = 100; // 100 ms by default - for PNGs for example
-                                   // If the image to use is a Gif
+            // If the image to use is a Gif
             if (fileToUse.EndsWith(".gif"))
             {
                 ImageInfo info = GetImageInfo(fileToUse);
                 gifDuration = info.AnimationLength;
+                // Start timer to end after the animation
+                if (_animationTimer != null)
+                    _animationTimer.Dispose();
+                _animationTimer = new Timer(AnimationTimer, null, gifDuration, Timeout.Infinite);
             }
 
             if (File.Exists(fileToUse)) {
                 LogIt($"  Using file {curDir}/{fileToUse}");
-
                 // See https://github.com/vbousquet/flexdmd/blob/master/FlexDMDCmdTest/Program.cs
                 // For an example of displaying score (or a scene), then showing animations on top :
                 // https://www.vpforums.org/index.php?app=tutorials&article=145
@@ -327,15 +287,11 @@ class Program
                 // void DisplayScene01(string sceneId, string background, string text, int textBrightness, int textOutlineBrightness, int animateIn, int pauseTime, int animateOut);
                 // void DisplayText(string text, int textBrightness, int textOutlineBrightness);
                 // void ScrollingCredits(string background, string text, int textBrightness, int animateIn, int pauseTime, int animateOut);
-                // LogIt($"🔥DOF2DMD DisplayPicture {fileToUse}");
-                gUdmd.DisplayScene00($"{fileToUse}", "", -1, "", -1, 14, gifDuration, 14);
-                if (fileToUse.EndsWith(".gif"))
-                {
-                    // After a Gif, always queue the game Marquee to avoid showing last Gif frame for too long
-                    DisplayPicture(gGameMarquee, true, 99999);
-                }
+                gUDmdDevice.CancelRendering();
+                gUDmdDevice.DisplayScene00($"{fileToUse}", "", -1, "", -1, 14, gifDuration, 14);
             } else {
                 LogIt($"  File not found: {curDir}/{fileToUse}");
+                return false;
             }
             return true;
         }
@@ -346,60 +302,42 @@ class Program
         }
     }
 
-    public static Boolean DisplayScore(string score)
+    /// <summary>
+    /// Displays the player's score on the DMD device.
+    /// Starts a timer to revert to the game marquee after a specified duration.
+    /// </summary>
+    public static Boolean DisplayScore(int player, int score)
     {
-        // If score is an int, then this is the score. Otherwise, this is the player number
-        if (int.TryParse(score, out int scoreInt))
-        {
-            gScore[gActivePlayer] = scoreInt;
-            if (!gUdmd.IsRendering())
-            {
-                LogIt($"DisplayScore: {score}");
-                _lastDisplayScore = DateTime.Now;
-                gUdmd.DisplayScoreboard(gNbPlayers, gActivePlayer, gScore[1], gScore[2], gScore[3], gScore[4], $"PLAYER {gActivePlayer}", "");
-            }
-        }
-        else
-        {
-            // If score is not empty string
-            if (score != "")
-            {
-                // Extract the Active player from the score : if score="PLAYER N", then gActivePlayer = N
-                try
-                {
-                    gActivePlayer = int.Parse(score.Replace("PLAYER ", ""));
-
-                    if (gActivePlayer > gNbPlayers)
-                        gNbPlayers=gActivePlayer;
-                }
-                catch (Exception ex)
-                {
-                    Trace.WriteLine($"Error while parsing score {score} : {ex.Message}");
-                }
-            }
-        }
+        gScore[player] = score;
+        LogIt($"DisplayScore for player {player}: {score}");
+        gScoreQueued = true;
+        gUDmdDevice.DisplayScoreboard(gNbPlayers, gActivePlayer, gScore[1], gScore[2], gScore[3], gScore[4], $"PLAYER {gActivePlayer}", "");
+        if (_scoreTimer != null)
+            _scoreTimer.Dispose();
+        _scoreTimer = new Timer(ScoreTimer, null, AppSettings.displayScoreDuration * 1000, Timeout.Infinite);
         return true;
     }
 
+    /// <summary>
+    /// Handle incoming HTTP requests
+    /// </summary>
     static async Task HandleIncomingConnections(HttpListener listener)
     {
         bool runServer = true;
         while (runServer)
         {
             HttpListenerContext ctx = await listener.GetContextAsync();
-
             HttpListenerRequest req = ctx.Request;
             HttpListenerResponse resp = ctx.Response;
 
-            LogIt($"Received request for {req.Url}");
-
             string dof2dmdUrl = req.Url.ToString();
-            if (AppSettings.pixelCadeEmu)
-                // PixelCade emulation
-                dof2dmdUrl = TranslatePixelCadeToDOF2DMD(dof2dmdUrl);
-
-            string sResponse = ProcessRequest(dof2dmdUrl);
-            // Send "OK" as answer in body of the response
+            string sResponse = "OK";
+            if (dof2dmdUrl.Contains("v1/"))
+            {
+                LogIt($"Received request for {req.Url}");
+                sResponse = ProcessRequest(dof2dmdUrl);
+            }
+            // Answer is 200 OK anyhow, as it may block misbehaving processes
             resp.StatusCode = 200;
             resp.ContentType = "text/plain";
             resp.ContentEncoding = Encoding.UTF8;
@@ -411,10 +349,12 @@ class Program
             }
             resp.Close();
         }
-
-        gDmd.Run = false;
+        gDmdDevice.Run = false;
     }
 
+    /// <summary>
+    /// Process incoming requests
+    /// </summary>
     private static string ProcessRequest(string dof2dmdUrl)
     {
         var newUrl = new Uri(dof2dmdUrl);
@@ -422,24 +362,24 @@ class Program
         string sReturn = "OK";
 
         string[] urlParts = newUrl.AbsolutePath.Split('/');
-        
+
         // This is the set of APIs that DOF2DMD can handle:
-        // [url_prefix]/v1/display/picture?path=<path>?animated=[true|false]&duration=<duration in ms> (without gif or png extension - which is automatically handled)
-        // NOT IMPLEMENTED : [url_prefix]/v1/display/scorebackgroundimage?path=<path>&brightness=<brightness 0-15>
+        // [url_prefix]/v1/display/picture?path=<path>?fixed=[true|false]&duration=<duration in ms> (without gif or png extension - which is automatically handled)
         // [url_prefix]/v1/display/score?player=<player>&score=<score>
-        // NOT IMPLEMENTED : [url_prefix]/v1/display/text?text=<text>?size=[S|M|L]&color=#FFFFFF&font=[font]&bordercolor=[color]&bordersize=[size]
-        // NOT IMPLEMENTED : [url_prefix]/v1/display/scene?background =<image or video path>&toptext=<text>&topbrightness=<brightness 0 - 15>&bottomtext=<text>&bottombrightness=<brightness  0 - 15>&animatein=<0 - 15>&animateout=<0 - 15>&pausetime=<pause in ms>
         // [url_prefix]/v1/blank
         // [url_prefix]/v1/exit
         // [url_prefix]/v1/version
+        // NOT IMPLEMENTED : [url_prefix]/v1/display/scorebackgroundimage?path=<path>&brightness=<brightness 0-15>
+        // NOT IMPLEMENTED : [url_prefix]/v1/display/text?text=<text>?size=[S|M|L]&color=#FFFFFF&font=[font]&bordercolor=[color]&bordersize=[size]
+        // NOT IMPLEMENTED : [url_prefix]/v1/display/scene?background =<image or video path>&toptext=<text>&topbrightness=<brightness 0 - 15>&bottomtext=<text>&bottombrightness=<brightness  0 - 15>&animatein=<0 - 15>&animateout=<0 - 15>&pausetime=<pause in ms>
         if (urlParts[1] == "v1")
         {
             switch (urlParts[2])
             {
                 case "blank":
                     gGameMarquee = "";
-                    gUdmd.CancelRendering();
-                    gUdmd.Clear();
+                    gUDmdDevice.CancelRendering();
+                    gUDmdDevice.Clear();
                     break;
                 case "exit":
                     Environment.Exit(0);
@@ -452,50 +392,40 @@ class Program
                     switch (urlParts[3])
                     {
                         case "picture":
-                            // [url_prefix]/v1/display/picture?path=<path>?animated=[true|false]&duration=<duration in ms> (without gif or png extension - which is automatically handled)
+                            // [url_prefix]/v1/display/picture?path=<path>?fixed=[true|false] (without gif or png extension - which is automatically handled)
                             // Extract parameters:
                             // path = path to the image
-                            // animated = whether the image is animated
+                            // fixed = whether the image is fixed (not animated)
                             // duration = duration of the animation
                             string path = query.Get("path");
                             // If argument fixed is present
                             string sfixed = "";
                             if (query.Get("fixed") != null)
                                 sfixed = query.Get("fixed");
-                            string duration = "1";
-                            if (query.Get("duration") != null)
-                                duration = query.Get("duration");
 
                             if (query.Count == 1)
                             {
-                                // This is a game marquee, provided during new game
-                                gGameMarquee = path;
+                                // This is certainly a game marquee, provided during new game
+                                // If path corresponds to an existing file, set game marquee
+                                if (File.Exists($"{AppSettings.artworkPath}/{path}.png")) 
+                                    gGameMarquee = path;
                                 // Reset scores for all players
                                 for (int i = 1; i <= 4; i++)
                                     gScore[i] = 0;
-
                             }
-                            // if fixed and duration = 99999, then change marquee, but do not display it
-                            if (sfixed == "true" && duration == "99999") {
-                                LogIt($"GameMarquee is now set to: {path}");
-                                gGameMarquee = path;
-                            } else if (!gUdmd.IsRendering()) {
-                                // Show picture only if there is no rendering going on
-                                DisplayPicture(path, sfixed == "true", int.Parse(duration));
+                            if (!DisplayPicture(path, sfixed == "true"))
+                            {
+                                sReturn = $"Picture not found: {path}";
                             }
                             break;
                         case "score":
                             // [url_prefix]/v1/display/score?player=<player>&score=<score>
-                            
-                            string score = query.Get("score");
-                            if (query.Get("player") != null) {
-                                int player = int.Parse(query.Get("player"));
-                                if (player > gNbPlayers)
-                                    gNbPlayers = player;
-                                gActivePlayer = player;
-                            }
-                            _lastDisplayScoreCall = DateTime.Now;
-                            DisplayScore(score);
+                            int score = int.Parse(query.Get("score"));
+                            int player = int.Parse(query.Get("player"));
+                            if (player > gNbPlayers)
+                                gNbPlayers = player;
+                            gActivePlayer = player;
+                            DisplayScore(player, score);
                             break;
                         default:
                             sReturn = "Not implemented";
