@@ -37,7 +37,8 @@ uses [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
     ```ini
     ; Settings for DOF2DMD
     ; The base URL that DOF2DMD will listen to. Defaults to http://127.0.0.1:8080
-    ;url_prefix=http://127.0.0.1:8080
+    ; DO NOT COMMENT OUT, as DOFLinx reads settings.ini to determine where to send requests to
+    url_prefix=http://127.0.0.1:8080
     ; Display the score for x seconds, then back to marquee. Defaults to 5 seconds.
     ;display_score_duration_s=5
     ; Verbose output in debug.log file if debug=true. Defaults to false.
@@ -49,19 +50,18 @@ uses [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
     ; Height in pixels for DMD. Defaults to 64
     ;dmd_height=64
     ; Picture to display when DOF2DMD starts. Defaults to DOF2DMD (that is artwork/DOF2DMD.png or DOF2DMD.gif)
-    ;start_picture=
+    ;start_picture=DOF2DMD
     ; Not implemented ---
     ;scene_default=marquee
     ;number_of_dmd=1
     ;animation_dmd=1
     ;score_dmd=1
     ;marquee_dmd=1
-    
     ```
 - Launch DOF2DMD
 - You should see the DOF2DMD logo, either on a Virtual DMD, or real DMD if you have configured `DmdDevice.ini`
 - If using DOFLinx for MAME
-  - Install [DOFLinx](https://www.vpforums.org/index.php?showforum=104)
+  - Install [DOFLinx](https://www.vpforums.org/index.php?showforum=104) - see [DOFLinx setup for DOF2DMD](#use-in-doflinx)
   - Get [modified MAME version](https://drive.google.com/drive/folders/1AjJ8EQo3AkmG2mw7w0fLzF9HcOjFoUZH)
   - Launch DOFLinx (should be at startup if you are on an Arcade cabinet).
   - Launch your MAME game. The modified version of MAME will communicate with
@@ -72,14 +72,15 @@ uses [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
 
 The images and animations must be in the `artwork` folder (by default in the DOF2DMD path under the `artwork` folder).
 
-
 > [!NOTE]
-> Do not ask me where to find artwork for the DMD. I cannot help with
+> I provide a basic set of artwork, so that you can test and start editing DOFLINX's `.MAME` files.
+You probably need more artwork. Do not ask me where to find artwork for the DMD. I cannot help with
 that. There is however a pack you can download, and more you can buy from
 [Neo-Arcadia](https://www.neo-arcadia.com/forum/viewtopic.php?t=67065). If you
 own a [PixelCade](https://pixelcade.org/), then you are entitled to a massive
-pixel perfect DMD artwork library.
-
+pixel perfect DMD artwork library. To create your own artwork, you can use a 
+Pixel Art tool or Gif editor, like [aseprite](https://www.aseprite.org/).
+There are example aseprite files in [the `ingame.src` folder](/DOF2DMD/artwork/ingame.src/).
 
 ## API
 
@@ -121,6 +122,73 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
   - **animateout**: The animation effect for the scene exit, ranging from 0 to 15
   - **pausetime**: The duration in milliseconds for which the scene should be displayed
 
+## Use in DOFLinx
+
+To generate effects, DOFLinx uses `.MAME` files located in DOFLinx's MAME
+folder. DOFLinx can communicate with DOF2DMD, using DOFLinx `FF_DMD` command.
+The `FF_DMD` command can call any of the DOF2DMD APIs.
+
+### `DOFLinx.ini` file
+
+Here is a minimal DOFLinx.ini file which will work with `DOF2DMD`:
+
+```ini
+# location of your files and systems
+COLOUR_FILE=<DOFLinx path>\config\colours.ini
+DIRECTOUTPUTGLOBAL=<DOFLinx path>\config\GlobalConfig_b2sserver.xml
+PATH_MAME=<DOFLinx path>\MAME\
+MAME_FOLDER=<MAME executable path (note: it must be DOFLinx modified MAME version)>
+
+# When to activate, and more specifically what is the MAME process to kick things off
+PROCESSES=Mame64
+MAME_PROCESS=Mame64
+
+# DOF2DMD
+PATH_DOF2DMD=<location of DOF2DMD executable and settings.ini>
+```
+
+Note:
+
+- `PATH_DOF2DMD`: the location of DOF2DMD executable and settings.ini
+- `MAME_FOLDER`: MAME executable path which must be DOFLinx's [modified version of MAME](https://drive.google.com/drive/folders/1AjJ8EQo3AkmG2mw7w0fLzF9HcOjFoUZH)
+
+### Embedded commands
+
+DOFLinx will generate the following commands automatically:
+
+- When starting DOFLinx:
+  - `http://<host:port>/v1/version` - to check that DOF2DMD is up. DOFLinx will attempt to start it otherwise.
+  - `http://<host:port>/v1/display/picture?path=mame/DOFLinx` - to display the DOFLinx welcome picture
+- When starting a game:
+  - `http://<host:port>/v1/display/picture?path=mame/<rom-name>&fixed=true` - to display a PNG for the marquee
+- When playing a game:
+  - `http://<host:port>/v1/display/score?player=<player>&score=<score>` - to display score of the given player
+- When closing DOFLinx:
+  - `http://<host:port>/v1/display/score?player=1&score=0` - reset score to 0
+  - `http://<host:port>/v1/blank` - to clear the DMD (goes to black)
+  - `http://<host:port>/v1/exit` - to instruct DOF2DMD to exit cleanly
+
+### Syntax of `FF_DMD` DOFLinx command
+
+To add effects like showing animations or text during the game, you must insert
+the `FF_DMD` command in the `<rom>.MAME` file which corresponds to the game.
+
+```ascii
+FF_DMD,U,<DOF2DMD API CALL without host nor /v1/ prefix>
+```
+
+- `FF_DMD` is the command
+- `U` is for a user command (DOFLinx specific)
+- Then the URI to call DOF2DMD without host nor /v1/ prefix
+
+Examples :
+
+- Display the ingame bonus animation `artwork/ingame/bonus.gif` : `FF_DMD,U,display/picture?path=ingame/bonus&fixed=false`
+- Display a static picture `artwork/mame/pacman.png` : `FF_DMD,U,display/picture?path=mame/pacman&fixed=true`
+- Display an animated Gif if it exists or falls back to png : `artwork/mame/pacman.gif` : `FF_DMD,U,display/picture?path=mame/pacman`
+
+Check the `.MAME` files included in DOFLinx, which already contain `FF_DMD` commands.
+
 ## Testing
 
 Once DOF2DMD is started, you can use your browser to test it:
@@ -132,6 +200,8 @@ Once DOF2DMD is started, you can use your browser to test it:
 - Blank the DMD [http://127.0.0.1:8080/v1/blank](http://127.0.0.1:8080/v1/blank)
 - Exit DOF2DMD [http://127.0.0.1:8080/v1/exit](http://127.0.0.1:8080/v1/exit)
 
+or use the [`demo.ps1`](/DOF2DMD/demo.ps1) PowerShell script.
+
 ## TODO
 
 Here is what I plan to implement : 
@@ -139,8 +209,8 @@ Here is what I plan to implement :
 - API calls which are not implemented yet
 - Everything missing from the `settings.ini`
 - A plugin for [Launch box / big box](http://pluginapi.launchbox-app.com/) which
-  will interface with DOF2DMD to show systems and game marquees when browsing
-  games
+  interfaces with DOF2DMD to show systems and game marquees when browsing
+  games (partially implemented)
 - Better score display
 
 ## Thank you
@@ -148,13 +218,14 @@ Here is what I plan to implement :
 Thanks to
 
 - DDH69 for DOFLinx, MAME for DOFLinx, and his support in this project. Think of
-  [donating to DDH69](https://www.paypal.com/donate?hosted_button_id=YEPCTUYFX5KDE).
+  [💲donating to DDH69](https://www.paypal.com/donate?hosted_button_id=YEPCTUYFX5KDE) to support his work.
 - [Pixelcade](https://pixelcade.org/) team who inspired me in implementing
-  something for my ZeDMD, including support for other DMDs (hopefully!). Please,
-  check them out, their DMDs are top notch, multiple sizes, and if you own one
-  of them, there is a ton of artwork available.
+  something for my ZeDMD, including support for other DMDs. Please, check them
+  out, I am told their DMDs are top notch, multiple sizes, and if you own one of
+  them, there is a ton of artwork available.
 - The creator of ZeDMD -
   [Zedrummer](https://www.pincabpassion.net/t14798-tuto-installation-du-zedmd),
   which is a nice and cheap DMD. You can buy ZeDMD in multiple places.
 - Everyone at [Monte Ton Cab (FR)](https://montetoncab.fr/) - what a welcoming
   community!
+- [@gustavoalara](https://github.com/gustavoalara) for the first pull request to this project!
