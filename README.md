@@ -213,6 +213,11 @@ Here is what I plan to implement :
   games (partially implemented)
 - Better score display
 
+## 💬 Questions and support
+
+I count on the Pinball and Arcade community to help each other through the [GitHub discussions](https://github.com/ojacques/DOF2DMD/discussions).
+I will be there too.
+
 ## Thank you
 
 Thanks to
