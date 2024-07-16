@@ -1,4 +1,4 @@
-﻿// DOF2DMD : a utility to interface DOFLinx with DMD Devices through 
+// DOF2DMD : a utility to interface DOFLinx with DMD Devices through 
 //           [FlexDMD](https://github.com/vbousquet/flexdmd), and 
 //           [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
 //
@@ -32,15 +32,24 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.Diagnostics;
 using FlexDMD;
+using FlexDMD.Actors;
+using FlexDMD.Scenes;
 using System.IO;
 using System.Drawing.Imaging;
 using System.Web;
 using Microsoft.Extensions.Configuration;
 using System.Text;
+using UltraDMD;
+using System.Reflection.Emit;
+using static System.Formats.Asn1.AsnWriter;
+using System.Numerics;
+using System.Runtime.InteropServices;
+using System.Collections.Generic;
+using System.Globalization;
 
-class Program
+class DOF2DMD
 {
-    public static FlexDMD.IFlexDMD gDmdDevice;
+    public static FlexDMD.FlexDMD gDmdDevice;
     public static FlexDMD.IUltraDMD gUDmdDevice;
     public static int[] gScore = [0, 0, 0, 0, 0];
     public static int gActivePlayer = 1;
@@ -64,7 +73,7 @@ class Program
             Width = AppSettings.dmdWidth,
             Height = AppSettings.dmdHeight,
             GameName = "DOF2DMD",
-            Color = Color.Aqua,
+            Color = Color.White,
             RenderMode = RenderMode.DMD_RGB,
             Show = true,
             Run = true
@@ -253,7 +262,8 @@ class Program
                 _animationTimer = new Timer(AnimationTimer, null, gifDuration, Timeout.Infinite);
             }
 
-            if (File.Exists(fileToUse)) {
+            if (File.Exists(fileToUse))
+            {
                 LogIt($"  Using file {curDir}/{fileToUse}");
                 // See https://github.com/vbousquet/flexdmd/blob/master/FlexDMDCmdTest/Program.cs
                 // For an example of displaying score (or a scene), then showing animations on top :
@@ -289,7 +299,9 @@ class Program
                 // void ScrollingCredits(string background, string text, int textBrightness, int animateIn, int pauseTime, int animateOut);
                 gUDmdDevice.CancelRendering();
                 gUDmdDevice.DisplayScene00($"{fileToUse}", "", -1, "", -1, 14, gifDuration, 14);
-            } else {
+            }
+            else
+            {
                 LogIt($"  File not found: {curDir}/{fileToUse}");
                 return false;
             }
@@ -315,6 +327,105 @@ class Program
         if (_scoreTimer != null)
             _scoreTimer.Dispose();
         _scoreTimer = new Timer(ScoreTimer, null, AppSettings.displayScoreDuration * 1000, Timeout.Infinite);
+        return true;
+    }
+
+    /// <summary>
+    /// Displays ScoreBackground on the DMD device.
+    /// </summary>
+    public static Boolean DisplayScorebackground(string scorebackground, int brightness)
+    {
+        LogIt("Display ScoreBackground");
+        gUDmdDevice.SetScoreboardBackgroundImage(scorebackground, brightness, 10);
+        return true;
+    }
+    /// <summary>
+    /// Displays text on the DMD device.
+    /// </summary>
+    public static Boolean DisplayText(string text, string size, string color, string font, string bordercolor, string bordersize)
+    {
+        int border = 0;
+        if (bordersize != "0")
+        {
+            border = 1;
+        }
+
+        // This configures the DMD in background erase mode so it doesn't leave a halo when scrolling or animating between frames
+        gDmdDevice.Clear = true;
+
+        // This defines a font; it has to be in fnt format with its associated png. The story here is that there are some
+        // already included as resources in FlexDMD (They can be invoked as FlexDMD.Resources [font_name]. The list it includes is: 
+        // bm_army-12.fnt
+        // teeny_tiny_pixls-5.fnt
+        // udmd-f12by24.fnt
+        // udmd-f14by26.fnt
+        // udmd-f4by5.fnt
+        // udmd-f5by7.fnt
+        // udmd-f6by12.fnt
+        // udmd-f7by13.fnt
+        // udmd-f7by5.fnt
+        // zx_spectrum-7.fnt
+
+        FlexDMD.Font myFont = gDmdDevice.NewFont(font + ".fnt", Color.FromName(color), Color.FromName(bordercolor), border);
+
+        // This is necessary to add an image to the scene. The ResolveSrc is not
+        // clear to me; it is necessary, but since the path is also provided when
+        // adding the image, here leaving it blank has worked for me. I leave it
+        // commented because for these texts we leave it blank
+        //var assetManager = new FlexDMD.AssetManager();
+        //assetManager.ResolveSrc("");
+
+        //This defines a label and position it off to the right to scroll it to the left later
+        var myLabel = new FlexDMD.Label(gDmdDevice, myFont, text);
+
+        var fSize = myFont.MeasureFont(text);
+        myLabel.SetAlignedPosition(fSize.Width * 2, gDmdDevice.Height / 2, Alignment.Center);
+        //myLabel.SetSize(fSize.Width, fSize.Height);
+
+        //This define an image too
+        //var imageActor = new FlexDMD.Image(assetManager, "artwork/bnj.png", "MyImage");
+        //imageActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
+
+        //This passes to the DMD the actions to do
+        gDmdDevice.Post(() =>
+        {
+            gDmdDevice.LockRenderThread();
+            //This create a scene group
+            var sceneGroup = new Group(gDmdDevice);
+
+            //This adds the label to the scene group
+            //sceneGroup.AddActor(imageActor);
+            sceneGroup.AddActor(myLabel);
+
+            //This defines the move action over the label to create the scrool from right to the left
+            var act1 = new FlexDMD.MoveToAction(myLabel, myLabel.X - fSize.Width * 3, myLabel.Y, fSize.Width / 40);
+
+            // This creates the variable that storages the actions and uses the extended SequenceAction class
+            var sequenceAction = new CustomSequenceAction();
+
+            //This add the diferent actions for them to be performed one after the other
+            sequenceAction.Add(act1);
+            //sequenceAction.Add(act2);
+
+            //This activates the actions in the sequenceAction
+            myLabel.AddAction(sequenceAction);
+
+            // This checks if the sequence has finished, in which case the initial marquee image is shown again,
+            // the actors are removed, and frame deletion is disabled
+            sequenceAction.Finished += () =>
+            {
+                gDmdDevice.Stage.RemoveActor(sceneGroup);
+                gDmdDevice.Clear = false;
+                DisplayPicture(gGameMarquee, true);
+            };
+
+            // The sceneGroup is added as an actor to be shown on the DMD
+            gDmdDevice.Stage.AddActor(sceneGroup);
+            gDmdDevice.UnlockRenderThread();
+
+        });
+
+        LogIt($"Rendering text: {text}");
         return true;
     }
 
@@ -353,6 +464,21 @@ class Program
     }
 
     /// <summary>
+    /// Convert Hex Color to Int
+    /// </summary>
+    public static int HexToInt(string hexColor)
+    {
+        // Remove '#' if present
+        if (hexColor.IndexOf('#') != -1)
+            hexColor = hexColor.Replace("#", "");
+
+        // Convert hexadecimal to integer
+        int intValue = Int32.Parse(hexColor, System.Globalization.NumberStyles.HexNumber);
+
+        return intValue;
+    }
+
+    /// <summary>
     /// Process incoming requests
     /// </summary>
     private static string ProcessRequest(string dof2dmdUrl)
@@ -369,8 +495,8 @@ class Program
         // [url_prefix]/v1/blank
         // [url_prefix]/v1/exit
         // [url_prefix]/v1/version
-        // NOT IMPLEMENTED : [url_prefix]/v1/display/scorebackgroundimage?path=<path>&brightness=<brightness 0-15>
-        // NOT IMPLEMENTED : [url_prefix]/v1/display/text?text=<text>?size=[S|M|L]&color=#FFFFFF&font=[font]&bordercolor=[color]&bordersize=[size]
+        // [url_prefix]/v1/display/scorebackgroundimage?path=<path>&brightness=<brightness 0-15>
+        // SEMI IMPLEMENTED : [url_prefix]/v1/display/text?text=<text>?size=[S|M|L]&color=[color]]&font=[font]&bordercolor=[color]&bordersize=[size]
         // NOT IMPLEMENTED : [url_prefix]/v1/display/scene?background =<image or video path>&toptext=<text>&topbrightness=<brightness 0 - 15>&bottomtext=<text>&bottombrightness=<brightness  0 - 15>&animatein=<0 - 15>&animateout=<0 - 15>&pausetime=<pause in ms>
         if (urlParts[1] == "v1")
         {
@@ -407,7 +533,7 @@ class Program
                             {
                                 // This is certainly a game marquee, provided during new game
                                 // If path corresponds to an existing file, set game marquee
-                                if (File.Exists($"{AppSettings.artworkPath}/{path}.png")) 
+                                if (File.Exists($"{AppSettings.artworkPath}/{path}.png"))
                                     gGameMarquee = path;
                                 // Reset scores for all players
                                 for (int i = 1; i <= 4; i++)
@@ -427,13 +553,38 @@ class Program
                             gActivePlayer = player;
                             DisplayScore(player, score);
                             break;
+                        case "scorebackgroundimage":
+                            //[url_prefix] / v1 / display / scorebackgroundimage ? path =< path > &brightness =< brightness 0 - 15 >
+                            string scorebackground = query.Get("path");
+                            int brightness = int.Parse(query.Get("brightness"));
+                            LogIt($"Score Background is now set to: {scorebackground} with brightness {brightness}");
+                            DisplayScorebackground(scorebackground, brightness);
+                            break;
+                        case "text":
+                            // [url_prefix] / v1 / display / text ? text =< text >? size = [S | M | L] & color=[color]&font=[font]&bordercolor=[color]&bordersize=[size]
+                            string text = query.Get("text") ?? "";
+                            string size = query.Get("size") ?? "M"; // Not currently implemented
+                            string color = query.Get("color") ?? "white";
+                            string font = query.Get("font") ?? "bm_army-12";
+                            string bordercolor = query.Get("bordercolor") ?? "red";
+                            string bordersize = query.Get("bordersize") ?? "1";
+                            LogIt($"Text is now set to: {text} with size {size} ,color {color} ,font {font} ,border color {bordercolor} and border size {bordersize}");
+
+                            if (DisplayText(text, size, color, font, bordercolor, bordersize)) 
+                            {
+                                sReturn = "OK";
+                            } else
+                            {
+                                sReturn = "Error when displaying text";
+                            }
+                            break;
                         default:
                             sReturn = "Not implemented";
                             break;
                     }
                     break;
-                    default:
-                        sReturn = "Not implemented";
+                default:
+                    sReturn = "Not implemented";
                     break;
             }
             return sReturn;
@@ -441,5 +592,45 @@ class Program
         else
             return "Not implemented";
     }
-}
 
+}
+/// <summary>
+/// Extends the FlexDMD SequenceAction class of FlexDMD to be able to know 
+/// when a sequence of actions ends by adding the Finished method
+/// </summary>
+public class CustomSequenceAction : FlexDMD.SequenceAction
+{
+    public event System.Action Finished;
+
+    private readonly List<FlexDMD.Action> _actions = new List<FlexDMD.Action>();
+    private int _pos = 0;
+
+    public new ICompositeAction Add(FlexDMD.Action action)
+    {
+        _actions.Add(action);
+        return this;
+    }
+
+    public override bool Update(float secondsElapsed)
+    {
+        if (_pos >= _actions.Count)
+        {
+            // Prepare for restart
+            _pos = 0;
+            Finished?.Invoke();
+            return true;
+        }
+        while (_actions[_pos].Update(secondsElapsed))
+        {
+            _pos++;
+            if (_pos >= _actions.Count)
+            {
+                // Prepare for restart
+                _pos = 0;
+                Finished?.Invoke();
+                return true;
+            }
+        }
+        return false;
+    }
+}
