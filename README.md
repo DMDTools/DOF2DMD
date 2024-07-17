@@ -21,7 +21,7 @@ to show animations while playing MAME.
 
 Here is how it looks like with an emulated DMD (using Freezy DMD extensions):
 
-![1942](1942.gif)
+![Démo](demo.gif)
 
 DOF2DMD relies on [FlexDMD](https://github.com/vbousquet/flexdmd), which itself
 uses [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
