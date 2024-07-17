@@ -46,6 +46,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Globalization;
+using static System.Net.Mime.MediaTypeNames;
 
 class DOF2DMD
 {
@@ -60,6 +61,7 @@ class DOF2DMD
     private static Timer _animationTimer;
     private static readonly object _scoreQueueLock = new object();
     private static readonly object _animationQueueLock = new object();
+    
 
     static void Main(string[] args)
     {
@@ -226,9 +228,157 @@ class DOF2DMD
     }
 
     /// <summary>
+    /// Displays an image file on the DMD device using native FlexDMD capabilities.
+    /// </summary>
+
+    public static Boolean DisplayPicture2(string path, int duration)
+    {
+        LogIt($"DisplayPicture2 {path}");
+        try
+        {
+            // Validate input parameters
+            if (string.IsNullOrEmpty(path))
+                return false;
+
+            // Convert path in URI format to path in local filesystem format
+            string localPath = HttpUtility.UrlDecode(path);
+
+            //Aquí habrá que chequear si la imagen es una gif o video para tratarlo como NewVideo, para otras extensiones será NewImage
+            var assetManager = new FlexDMD.AssetManager();
+            assetManager.ResolveSrc("");
+            var imageActor = new FlexDMD.Image(assetManager, path, "MyImage");
+            imageActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
+            //This passes to the DMD the actions to do
+            gDmdDevice.Post(() =>
+            {
+
+
+                gDmdDevice.LockRenderThread();
+                //This create a scene group
+                var sceneGroup = new Group(gDmdDevice);
+
+
+                //This adds the image to the scene group
+                sceneGroup.AddActor(imageActor);
+                var act1 = new FlexDMD.WaitAction(duration);
+
+                // This creates the variable that storages the actions and uses the extended SequenceAction class
+                var sequenceAction = new CustomSequenceAction();
+
+                //This add the diferent actions for them to be performed one after the other
+                sequenceAction.Add(act1);
+                //sequenceAction.Add(act2);
+
+                //This activates the actions in the sequenceAction
+                imageActor.AddAction(sequenceAction);
+
+                // This checks if the sequence has finished, in which case the initial marquee image is shown again,
+                // the actors are removed, and frame deletion is disabled
+
+                sequenceAction.Finished += () =>
+                {
+                    gDmdDevice.Stage.RemoveActor(sceneGroup);
+                    gDmdDevice.Clear = false;
+                    DisplayPicture(gGameMarquee, true);
+                };
+                //The sceneGroup is added as an actor to be shown on the DMD
+                gDmdDevice.Stage.AddActor(sceneGroup);
+                gDmdDevice.UnlockRenderThread();
+            });
+
+            LogIt($"Rendering image: {path}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Trace.WriteLine($"  Error occurred while fetching the image. {ex.Message}");
+            return false;
+        }
+
+    }
+
+    /// <summary>
+    /// Displays an image or video file on the DMD device using native FlexDMD capabilities.
+    /// </summary>
+    /// REvisar el DisplayPicture y DisplayText porque esta es la manera buena de usar los NewVideo, NewImage y tal
+    public static Boolean DisplayVideo(string path, bool repeat=false)
+    {
+        LogIt($"DisplayVideo {path}");
+        try
+        {
+            // Validate input parameters
+            if (string.IsNullOrEmpty(path))
+                return false;
+
+            // Convert path in URI format to path in local filesystem format
+            string localPath = HttpUtility.UrlDecode(path);
+
+            //Aquí habrá que chequear si la imagen es una gif o video para tratarlo como NewVideo, para otras extensiones será NewImage
+
+            var videoActor = (AnimatedActor)gDmdDevice.NewVideo("MyVideo", localPath);
+
+            //var videoActor = new FlexDMD.Video(localPath, "myVideo", repeat);
+            videoActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
+            var sceneGroup = (Group)gDmdDevice.NewGroup("VideoGroup");
+
+            //This passes to the DMD the actions to do
+            gDmdDevice.Post(() =>
+            {
+
+
+                gDmdDevice.LockRenderThread();
+                //This create a scene group
+
+
+
+                //This adds the image to the scene group
+                sceneGroup.AddActor(videoActor);
+                //var act1 = new FlexDMD.WaitAction(duration);
+
+                // This creates the variable that storages the actions and uses the extended SequenceAction class
+                //var sequenceAction = new CustomSequenceAction();
+
+                //This add the diferent actions for them to be performed one after the other
+                //sequenceAction.Add(act1);
+                //sequenceAction.Add(act2);
+
+                //This activates the actions in the sequenceAction
+                //videoActor.AddAction(sequenceAction);
+                LogIt($"La duración del video es: {videoActor.Length}");
+                // This checks if the sequence has finished, in which case the initial marquee image is shown again,
+                // the actors are removed, and frame deletion is disabled
+
+
+                /*
+                sequenceAction.Finished += () =>
+                {
+                    gDmdDevice.Stage.RemoveActor(sceneGroup);
+                    gDmdDevice.Clear = false;
+                    DisplayPicture(gGameMarquee, true);
+                };
+                */
+                //The sceneGroup is added as an actor to be shown on the DMD
+
+                gDmdDevice.Stage.AddActor(sceneGroup);
+                gDmdDevice.UnlockRenderThread();
+            });
+            
+           
+            LogIt($"Rendering Video: {localPath}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Trace.WriteLine($"  Error occurred while fetching the video. {ex.Message}");
+            return false;
+        }
+
+    }
+    /// <summary>
     /// Displays an image file (GIF or PNG) on the DMD device.
     /// Handles animation timers and file selection based on input parameters.
     /// </summary>
+
     public static Boolean DisplayPicture(string path, bool bfixed)
     {
         LogIt($"DisplayPicture {path}, fixed? {bfixed}");
@@ -554,6 +704,34 @@ class DOF2DMD
                                 sReturn = $"Picture not found: {path}";
                             }
                             break;
+
+                        case "picture2":
+                            // [url_prefix]/v1/display/picture2?path=<path>&duration=<seconds>
+                            // Extract parameters:
+                            // path = path to the image
+                            // duration = duration of the animation
+                            string path2 = query.Get("path");
+                            int duration = Convert.ToInt16(query.Get("duration"));
+                            // If argument fixed is present
+
+                            if (!DisplayPicture2(path2, duration))
+                            {
+                                sReturn = $"Picture not found: {path2}";
+                            }
+                            break;
+
+                        case "video":
+                            // [url_prefix]/v1/display/video?path=<path>
+                            // Extract parameters:
+                            // path = path to the video
+                            string videopath = query.Get("path");
+                            // If argument fixed is present
+                            if (!DisplayVideo(videopath))
+                            {
+                                sReturn = $"Video not found: {videopath}";
+                            }
+                            break;
+
                         case "score":
                             // [url_prefix]/v1/display/score?player=<player>&score=<score>
                             int score = int.Parse(query.Get("score"));
