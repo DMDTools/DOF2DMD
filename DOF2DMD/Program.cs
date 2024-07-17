@@ -1,4 +1,4 @@
-﻿// DOF2DMD : a utility to interface DOFLinx with DMD Devices through 
+// DOF2DMD : a utility to interface DOFLinx with DMD Devices through 
 //           [FlexDMD](https://github.com/vbousquet/flexdmd), and 
 //           [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
 //
@@ -501,41 +501,36 @@ class DOF2DMD
         }
 
         // This configures the DMD in background erase mode so it doesn't leave a halo when scrolling or animating between frames
-
         gDmdDevice.Clear = true;
 
-        //This defines a font; it has to be in fnt format with its associated png. The story here is that there are some
-        //already included as resources in FlexDMD (They can be invoked as FlexDMD.Resources [font_name]. The list it includes is: 
-
-        //bm_army - 12.fnt
-        //teeny_tiny_pixls - 5.fnt
-        //udmd - f12by24.fnt
-        //udmd - f14by26.fnt
-        // udmd - f4by5.fnt
-        //udmd - f5by7.fnt
-        //udmd - f6by12.fnt
-        //udmd - f7by13.fnt
-        //udmd - f7by5.fnt
-        //zx_spectrum - 7.fnt
+        // This defines a font; it has to be in fnt format with its associated png. The story here is that there are some
+        // already included as resources in FlexDMD (They can be invoked as FlexDMD.Resources [font_name]. The list it includes is: 
+        // bm_army-12.fnt
+        // teeny_tiny_pixls-5.fnt
+        // udmd-f12by24.fnt
+        // udmd-f14by26.fnt
+        // udmd-f4by5.fnt
+        // udmd-f5by7.fnt
+        // udmd-f6by12.fnt
+        // udmd-f7by13.fnt
+        // udmd-f7by5.fnt
+        // zx_spectrum-7.fnt
 
         FlexDMD.Font myFont = gDmdDevice.NewFont(font + ".fnt", Color.FromName(color), Color.FromName(bordercolor), border);
 
-        //This is necessary to add an image to the scene. The ResolveSrc is not clear to me; it is necessary, but since the path is also provided when adding the image, here
-        //leaving it blank has worked for me. I leave it commented because for these texts we leave it blank
-
+        // This is necessary to add an image to the scene. The ResolveSrc is not
+        // clear to me; it is necessary, but since the path is also provided when
+        // adding the image, here leaving it blank has worked for me. I leave it
+        // commented because for these texts we leave it blank
         //var assetManager = new FlexDMD.AssetManager();
         //assetManager.ResolveSrc("");
 
         //This defines a label and position it off to the right to scroll it to the left later
-
         var myLabel = new FlexDMD.Label(gDmdDevice, myFont, text);
-
 
         var fSize = myFont.MeasureFont(text);
         myLabel.SetAlignedPosition(fSize.Width * 2, gDmdDevice.Height / 2, Alignment.Center);
         //myLabel.SetSize(fSize.Width, fSize.Height);
-
-
 
         //This define an image too
         //var imageActor = new FlexDMD.Image(assetManager, "artwork/bnj.png", "MyImage");
@@ -544,18 +539,13 @@ class DOF2DMD
         //This passes to the DMD the actions to do
         gDmdDevice.Post(() =>
         {
-
-
             gDmdDevice.LockRenderThread();
             //This create a scene group
             var sceneGroup = new Group(gDmdDevice);
 
-
             //This adds the label to the scene group
             //sceneGroup.AddActor(imageActor);
             sceneGroup.AddActor(myLabel);
-
-
 
             //This defines the move action over the label to create the scrool from right to the left
             var act1 = new FlexDMD.MoveToAction(myLabel, myLabel.X - fSize.Width * 3, myLabel.Y, fSize.Width / 40);
@@ -572,7 +562,6 @@ class DOF2DMD
 
             // This checks if the sequence has finished, in which case the initial marquee image is shown again,
             // the actors are removed, and frame deletion is disabled
-
             sequenceAction.Finished += () =>
             {
                 gDmdDevice.Stage.RemoveActor(sceneGroup);
@@ -580,7 +569,7 @@ class DOF2DMD
                 DisplayPicture(gGameMarquee, true);
             };
 
-            //The sceneGroup is added as an actor to be shown on the DMD
+            // The sceneGroup is added as an actor to be shown on the DMD
             gDmdDevice.Stage.AddActor(sceneGroup);
             gDmdDevice.UnlockRenderThread();
 
@@ -589,7 +578,6 @@ class DOF2DMD
         LogIt($"Rendering text: {text}");
         return true;
     }
-
 
     /// <summary>
     /// Handle incoming HTTP requests
@@ -624,20 +612,22 @@ class DOF2DMD
         }
         gDmdDevice.Run = false;
     }
+
     /// <summary>
-    /// Convert Hex Color  to Int
+    /// Convert Hex Color to Int
     /// </summary>
     public static int HexToInt(string hexColor)
     {
-        // Elimina el carácter '#' si está presente
+        // Remove '#' if present
         if (hexColor.IndexOf('#') != -1)
             hexColor = hexColor.Replace("#", "");
 
-        // Convierte el valor hexadecimal a un entero
+        // Convert hexadecimal to integer
         int intValue = Int32.Parse(hexColor, System.Globalization.NumberStyles.HexNumber);
 
         return intValue;
     }
+
     /// <summary>
     /// Process incoming requests
     /// </summary>
@@ -743,27 +733,28 @@ class DOF2DMD
                             break;
                         case "scorebackgroundimage":
                             //[url_prefix] / v1 / display / scorebackgroundimage ? path =< path > &brightness =< brightness 0 - 15 >
-
                             string scorebackground = query.Get("path");
                             int brightness = int.Parse(query.Get("brightness"));
-
                             LogIt($"Score Background is now set to: {scorebackground} with brightness {brightness}");
-
                             DisplayScorebackground(scorebackground, brightness);
                             break;
-
                         case "text":
                             // [url_prefix] / v1 / display / text ? text =< text >? size = [S | M | L] & color=[color]&font=[font]&bordercolor=[color]&bordersize=[size]
-
-                            string text = query.Get("text");
-                            string size = query.Get("size");
-                            string color = query.Get("color");
-                            string font = query.Get("font");
-                            string bordercolor = query.Get("bordercolor");
-                            string bordersize = query.Get("bordersize");
+                            string text = query.Get("text") ?? "";
+                            string size = query.Get("size") ?? "M"; // Not currently implemented
+                            string color = query.Get("color") ?? "white";
+                            string font = query.Get("font") ?? "bm_army-12";
+                            string bordercolor = query.Get("bordercolor") ?? "red";
+                            string bordersize = query.Get("bordersize") ?? "1";
                             LogIt($"Text is now set to: {text} with size {size} ,color {color} ,font {font} ,border color {bordercolor} and border size {bordersize}");
 
-                            DisplayText(text, size, color, font, bordercolor, bordersize);
+                            if (DisplayText(text, size, color, font, bordercolor, bordersize)) 
+                            {
+                                sReturn = "OK";
+                            } else
+                            {
+                                sReturn = "Error when displaying text";
+                            }
                             break;
                         default:
                             sReturn = "Not implemented";
@@ -781,7 +772,10 @@ class DOF2DMD
     }
 
 }
-//Extendemos la clase SequenceAction de FlexDMD para poder saber cuando acaba una secuencia de acciones añadiendo el metodo Finished
+/// <summary>
+/// Extends the FlexDMD SequenceAction class of FlexDMD to be able to know 
+/// when a sequence of actions ends by adding the Finished method
+/// </summary>
 public class CustomSequenceAction : FlexDMD.SequenceAction
 {
     public event System.Action Finished;
@@ -818,5 +812,3 @@ public class CustomSequenceAction : FlexDMD.SequenceAction
         return false;
     }
 }
-
-
