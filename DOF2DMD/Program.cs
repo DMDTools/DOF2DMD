@@ -56,7 +56,6 @@ namespace DOF2DMD
     class DOF2DMD
     {
         public static FlexDMD.FlexDMD gDmdDevice;
-        public static FlexDMD.IUltraDMD gUDmdDevice;
         public static int[] gScore = [0, 0, 0, 0, 0];
         public static int gActivePlayer = 1;
         public static int gNbPlayers = 1;
@@ -66,9 +65,12 @@ namespace DOF2DMD
         private static Timer _animationTimer;
         private static readonly object _scoreQueueLock = new object();
         private static readonly object _animationQueueLock = new object();
-        private static Group DMDScene;
+        //private static Group DMDScene;
         private static readonly object sceneLock = new object();
         private static Sequence _queue;
+
+
+        public static ScoreBoard _scoreBoard;
 
 
 
@@ -89,21 +91,49 @@ namespace DOF2DMD
                 Show = true,
                 Run = true
             };
-            gUDmdDevice = gDmdDevice.NewUltraDMD();
 
             _queue = new Sequence(gDmdDevice);
             _queue.FillParent = true;
+
+            //DMDScene = (Group)gDmdDevice.NewGroup("Scene");
+
+            FlexDMD.Font _scoreFontText;
+            FlexDMD.Font _scoreFontNormal;
+            FlexDMD.Font _scoreFontHighlight;
+
+            // UltraDMD uses f4by5 / f5by7 / f6by12
+            if(gDmdDevice.Height == 64 && gDmdDevice.Width == 256)
+            {
+                _scoreFontText = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f6by12.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
+                _scoreFontNormal = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f7by13.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
+                _scoreFontHighlight = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f12by24.fnt", Color.White, Color.Black,1);
+            }
+            else
+            {
+            
+                _scoreFontText = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f4by5.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
+                _scoreFontNormal = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f5by7.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
+                _scoreFontHighlight = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f6by12.fnt", Color.White, Color.Black,1);    
+            }
+
+            _scoreBoard = new ScoreBoard(
+                gDmdDevice,
+                _scoreFontNormal,
+                _scoreFontHighlight,
+                _scoreFontText
+                )
+            { Visible = false };
+
+            
+
             gDmdDevice.Stage.AddActor(_queue);
-
-            DMDScene = (Group)gDmdDevice.NewGroup("Scene");
-
+            gDmdDevice.Stage.AddActor(_scoreBoard);
 
             // Display start picture as game marquee
             gGameMarquee = AppSettings.StartPicture;
-            LogIt($"GameMarquee es: {gGameMarquee}");
 
-            Thread.Sleep(1000);
-            DisplayPicture(gGameMarquee, true, 0);
+            Thread.Sleep(500);
+            DisplayPicture(gGameMarquee, -1, "none");
 
 
             // Start the http listener
@@ -115,7 +145,60 @@ namespace DOF2DMD
 
             Task listenTask = HandleIncomingConnections(listener);
             listenTask.GetAwaiter().GetResult();
+        }/// <summary>
+        /// Callback method once animation is finished.
+        /// Displays the player's score or the game marquee picture based on the state of gScoreQueued.
+        /// </summary>
+        private static void AnimationTimer(object state)
+        {
+            LogIt("⏱️ AnimationTimer");
+
+
+                    _animationTimer.Dispose();
+                    // Display score if gScoreQueued, or display marquee
+                    if (gScoreQueued)
+                    {
+                        if (AppSettings.ScoreDmd != 0)
+                        {
+                            LogIt("  ⏱️ AnimationTimer: score queued, display it");
+                            if (gScore[gActivePlayer] > 0)
+                                DisplayScoreboard(gNbPlayers, gActivePlayer, gScore[1], gScore[2], gScore[3], gScore[4], $"Player {gActivePlayer}", "Gus", true);
+                            gScoreQueued = false;
+                        }
+                    }
+                    else
+                    {
+                        if (AppSettings.marqueeDmd != 0)
+                        {
+                            LogIt("  ⏱️ AnimationTimer: no score queued, restore game marquee");
+                            DisplayPicture(gGameMarquee, -1, "none");
+                        }
+                    }
+            
+            
         }
+
+        /// <summary>
+        /// This method is a callback for a timer that displays the current score.
+        /// It then calls the DisplayPicture method to show the game marquee picture.
+        /// </summary>
+        private static void ScoreTimer(object state)
+        {
+            LogIt("⏱️ ScoreTimer");
+            lock (_scoreQueueLock)
+            {
+                try
+                {
+                    DisplayPicture(gGameMarquee, -1, "none");
+                }
+                finally
+                {
+                    // Asegurarse de que se disponga el temporizador
+                    _scoreTimer?.Dispose();
+                }
+            }
+        }
+        
 
 
         /// <summary>
@@ -160,186 +243,336 @@ namespace DOF2DMD
                 Trace.WriteLine(message);
             }
         }
+        public static Boolean DisplayScore(int cPlayers, int player, int score, bool sCleanbg)
+        {
+            gScore[player] = score;
+            gActivePlayer = player;
+            gNbPlayers = cPlayers;
+            LogIt($"DisplayScore for player {player}: {score}");
+            gScoreQueued = true;
+            DisplayScoreboard(gNbPlayers, player, gScore[1], gScore[2], gScore[3], gScore[4], $"PLAYER {gActivePlayer}", "Test", sCleanbg);
 
+            if (AppSettings.ScoreDmd != 0)
+            {
+                _scoreTimer?.Dispose();
+                _scoreTimer = new Timer(ScoreTimer, null, AppSettings.displayScoreDuration * 1000, Timeout.Infinite);
+            }
+            return true;
+        }
+        /// <summary>
+        /// Displays the Score Board on the DMD device using native FlexDMD capabilities.
+        /// </summary>
+        public static bool DisplayScoreboard(int cPlayers, int highlightedPlayer, Int64 score1, Int64 score2, Int64 score3, Int64 score4, string lowerLeft, string lowerRight, bool cleanbg)
+        {
+            try
+            {
+                
+                _queue.Visible = !cleanbg;
+
+                //gDmdDevice.LockRenderThread();
+                gDmdDevice.Post(() =>
+                {
+
+                    _scoreBoard.SetNPlayers(cPlayers);
+                    _scoreBoard.SetHighlightedPlayer(highlightedPlayer);
+                    _scoreBoard.SetScore(score1, score2, score3, score4);
+                    _scoreBoard._lowerLeft.Text = lowerLeft;
+                    _scoreBoard._lowerRight.Text = lowerRight;
+
+                    _scoreBoard.Visible = true;
+
+
+                });
+                //gDmdDevice.UnlockRenderThread();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"  Error occurred while genering the Score Board. {ex.Message}");
+                return false;
+            }
+        }
         /// <summary>
         /// Displays an image file on the DMD device using native FlexDMD capabilities.
         /// </summary>
 
-        public static bool DisplayPicture(string path, bool bfixed, float duration)
+        public static bool DisplayPicture(string path, float duration, string animation)
         {
-            try
-            {
-                if (string.IsNullOrEmpty(path))
-                    return false;
-                path = AppSettings.artworkPath + "/" + path;
-                string localPath = HttpUtility.UrlDecode(path);
-
-                List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
-
-                LogIt($"número de actores: {DMDScene.ChildCount}");
-
-                if (FileExistsWithExtensions(localPath, extensions, out string foundExtension))
+            
+                try
                 {
-                    string fullPath = localPath + foundExtension;
+                    if (string.IsNullOrEmpty(path))
+                        return false;
 
-                    List<string> videoExtensions = new List<string> { ".gif", ".avi", ".mp4" };
-                    List<string> imageExtensions = new List<string> { ".png", ".jpg", ".bmp" };
+                    path = AppSettings.artworkPath + "/" + path;
+                    string localPath = HttpUtility.UrlDecode(path);
 
+                    List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
 
-                    gDmdDevice.Graphics.Clear(Color.Black);
-                    gDmdDevice.Clear = true;
-
-                    if (videoExtensions.Contains(foundExtension.ToLower()))
+                    if (FileExistsWithExtensions(localPath, extensions, out string foundExtension))
                     {
-                        gDmdDevice.LockRenderThread();
-                        var videoActor = (AnimatedActor)gDmdDevice.NewVideo("MyVideo", fullPath);
-                        videoActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
+                        string fullPath = localPath + foundExtension;
+                        bool isVideo = new List<string> { ".gif", ".avi", ".mp4" }.Contains(foundExtension.ToLower());
+                        bool isImage = new List<string> { ".png", ".jpg", ".bmp" }.Contains(foundExtension.ToLower());
 
-                        if (duration == 0)
-                        {
-                            duration = videoActor.Length;
-                            if (DMDScene.ChildCount >= 1)
-                            {
-                                DMDScene.RemoveAll();
-                            }
-                        }
-
-                        DMDScene.AddActor(videoActor);
-                        var action1 = new FlexDMD.WaitAction(duration);
-                        var action2 = new FlexDMD.ShowAction(videoActor, false);
-                        var action3 = new FlexDMD.RemoveFromParentAction(videoActor);
-                        var sequenceAction = new FlexDMD.SequenceAction();
-
-                        sequenceAction.Add(action1);
-                        sequenceAction.Add(action2);
-                        sequenceAction.Add(action3);
-
-                        videoActor.AddAction(sequenceAction);
-
-
-                        gDmdDevice.Stage.AddActor(DMDScene);
-                        gDmdDevice.UnlockRenderThread();
-
-                       
-                        LogIt($"Rendering video: {fullPath}");
-                        return true;
-                    }
-                    else if (imageExtensions.Contains(foundExtension.ToLower()))
+                        if (isVideo || isImage)
                     {
-
-                        gDmdDevice.LockRenderThread();
-
-                        var imageActor = (Actor)gDmdDevice.NewImage("MyImage", fullPath);
-                        imageActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
-                        /*
-                        var sequenceAction = new FlexDMD.SequenceAction();
-
-                        if (duration != 0)
+                        gDmdDevice.Post(() =>
                         {
-                            DMDScene.AddActor(imageActor);
-                            var action1 = new FlexDMD.WaitAction(duration);
-                            var action2 = new FlexDMD.ShowAction(imageActor, false);
-                            var action3 = new FlexDMD.RemoveFromParentAction(imageActor);
+                            gDmdDevice.Clear = true;
 
 
-                            sequenceAction.Add(action1);
-                            sequenceAction.Add(action2);
-                            sequenceAction.Add(action3);
-
-                        }
-                        else
-                        {
-                            if (DMDScene.ChildCount >= 1)
+                            // Liberar recursos existentes
+                            if (_queue.ChildCount >= 1)
                             {
-                                DMDScene.RemoveAll();
+                                _queue.RemoveAllScenes();
                             }
-                            DMDScene.AddActor(imageActor);
-                            var action1 = new FlexDMD.ShowAction(imageActor, true);
-                            sequenceAction.Add(action1);
+                            //gDmdDevice.LockRenderThread();
+                            gDmdDevice.Graphics.Clear(Color.Black);
+                            _scoreBoard.Visible = false;
+                            Actor mediaActor = isVideo ? (Actor)gDmdDevice.NewVideo("MyVideo", fullPath) : (Actor)gDmdDevice.NewImage("MyImage", fullPath);
+                            mediaActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
+
+
+                            if (duration != -1)
+                            {
+
+                                if (isVideo && duration == 0)
+                                {
+                                    duration = ((AnimatedActor)mediaActor).Length;
+                                }
+                                _animationTimer?.Dispose();
+                                _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+                            }
+                            BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration);
+
+                            _queue.Visible = true;
+                            _queue.Enqueue(bg);
+
+
+                            //gDmdDevice.UnlockRenderThread();
+
+                        });
+
+                            LogIt($"Rendering {(isVideo ? "video" : "image")}: {fullPath}");
+                            return true;
                         }
-
-                        imageActor.AddAction(sequenceAction);
-                        */
-                        _queue.RemoveAllScenes();
-                        var bg = new BackgroundScene(gDmdDevice, imageActor, AnimationType.ScrollOnDown, 0, AnimationType.ScrollOffDown, "");
-                        _queue.Visible = true;
-                        _queue.Enqueue(bg);
-                        
-
-                        //gDmdDevice.Stage.AddActor(DMDScene);
-                        gDmdDevice.UnlockRenderThread();
-
-
-                        LogIt($"Rendering image: {fullPath}");
-                        return true;
+                    
+                        return false;
                     }
+
                     return false;
                 }
-                return false;
-            }
-            catch (Exception ex)
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"Error occurred while fetching the image. {ex.Message}");
+                    return false;
+                }
+            
+        }
+
+        private static BackgroundScene CreateBackgroundScene(FlexDMD.FlexDMD gDmdDevice, Actor mediaActor, string animation, float duration)
+        {
+            return animation switch
             {
-                Trace.WriteLine($"  Error occurred while fetching the image. {ex.Message}");
-                return false;
-            }
+                "none" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, ""),
+                "fade" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.FadeIn, duration, AnimationType.FadeOut, ""),
+                "scrollright" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffRight, ""),
+                "scrollrightleft" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffLeft, ""),
+                "scrollleft" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffLeft, ""),
+                "scrollleftright" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffRight, ""),
+                "scrolldown" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffDown, ""),
+                "scrolldownup" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffUp, ""),
+                "scrollup" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffUp, ""),
+                "scrollupdown" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffDown, ""),
+                "zoom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ZoomIn, duration, AnimationType.ZoomOut, ""),
+                _ => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, "")
+            };
         }
 
         /// <summary>
         /// Displays text on the DMD device.
-        /// %0A para salto de linea
+        /// %0A o | para salto de linea
         /// </summary>
-        public static bool DisplayText(string text, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg)
+        public static bool DisplayText(string text, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animation, float duration)
         {
-            int border = 0;
-            if (bordersize != "0")
+            try
             {
-                border = 1;
-            }
+                // Convert size to numeric value based on device dimensions
+                size = GetFontSize(size, gDmdDevice.Width, gDmdDevice.Height);
 
-            gDmdDevice.LockRenderThread();
-            /*
-            if (cleanbg)
-            {
-                if (DMDScene.ChildCount >= 1)
+                // Determine if border is needed
+                int border = bordersize != "0" ? 1 : 0;
+
+                //gDmdDevice.LockRenderThread();
+                gDmdDevice.Post(() =>
                 {
-                    DMDScene.RemoveAll();
+                    // Create font and label actor
+                    FlexDMD.Font myFont = gDmdDevice.NewFont($"resources/{font}_{size}.fnt", HexToColor(color), HexToColor(bordercolor), border);
+                    var labelActor = (Actor)gDmdDevice.NewLabel("MyLabel", myFont, text);
+
+                    var currentActor = new Actor();
+                    if (cleanbg)
+                    {
+                        _queue.RemoveAllScenes();
+                    }
+
+                    // Create background scene based on animation type
+                    _animationTimer?.Dispose();
+                    _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000, Timeout.Infinite);
+                    BackgroundScene bg = CreateTextBackgroundScene(animation.ToLower(), currentActor, text, myFont, duration);
+
+                    _queue.Visible = true;
+
+                    // Add scene to the queue or directly to the stage
+                    if (cleanbg)
+                    {
+                        _queue.Enqueue(bg);
+                    }
+                    else
+                    {
+                        gDmdDevice.Stage.AddActor(bg);
+                    }
+                });
+                //gDmdDevice.UnlockRenderThread();
+
+                LogIt($"Rendering text: {text}");
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static string GetFontSize(string size, int width, int height)
+        {
+            var sizeMapping = new Dictionary<(int, int), Dictionary<string, string>>
+            {
+                {
+                    (128, 32), new Dictionary<string, string>
+                    {
+                        { "XS", "6" }, { "S", "8" }, { "M", "12" },
+                        { "L", "16" }, { "XL", "24" }, { "XXL", "32" }
+                    }
+                },
+                {
+                    (256, 64), new Dictionary<string, string>
+                    {
+                        { "XS", "12" }, { "S", "16" }, { "M", "24" },
+                        { "L", "32" }, { "XL", "48" }, { "XXL", "64" }
+                    }
                 }
+            };
+
+            if (sizeMapping.TryGetValue((width, height), out var sizeDict) && sizeDict.TryGetValue(size, out var newSize))
+            {
+                return newSize;
             }
 
-
-            gDmdDevice.Clear = true;
-            */
-            FlexDMD.Font myFont = gDmdDevice.NewFont("FlexDMD.Resources." + font + ".fnt", Color.FromName(color), Color.FromName(bordercolor), border);
-            var labelActor = (Actor)gDmdDevice.NewLabel("MyLabel", myFont, text);
-            var fSize = myFont.MeasureFont(text);
-            //labelActor.SetPosition(fSize.Width * 2, gDmdDevice.Height / 2);
-            //labelActor.SetAlignedPosition(fSize.Width * 2, gDmdDevice.Height / 2, Alignment.Center);
-            /*
-            DMDScene.AddActor(labelActor);
-
-
-            var action1 = new FlexDMD.MoveToAction(labelActor, labelActor.X - fSize.Width * 3, labelActor.Y, fSize.Width / 40);
-            var action2 = new FlexDMD.RemoveFromParentAction(labelActor);
-            var sequenceAction = new FlexDMD.SequenceAction();
-
-            sequenceAction.Add(action1);
-            sequenceAction.Add(action2);
-
-            labelActor.AddAction(sequenceAction);
-
-            gDmdDevice.Stage.AddActor(DMDScene);*/
-            _queue.RemoveAllScenes();
-            var bg = new BackgroundScene(gDmdDevice, labelActor, AnimationType.ScrollOnDown, 0, AnimationType.ScrollOffDown, "");
-            _queue.Visible = true;
-            _queue.Enqueue(bg);
-
-            gDmdDevice.UnlockRenderThread();
-
-
-            LogIt($"Rendering text: {text}");
-            return true;
+            return sizeMapping.ContainsKey((width, height)) ? sizeDict["S"] : "8";
         }
- 
+
+        private static BackgroundScene CreateTextBackgroundScene(string animation, Actor currentActor, string text, FlexDMD.Font myFont, float duration)
+        {
+            return animation switch
+            {
+                "scrolldown" => new ScrollingDownScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None),
+                "scrollup" => new ScrollingUpScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None),
+                "scrollright" => new ScrollingRightScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None),
+                "scrollleft" => new ScrollingLeftScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None),
+                _ => new NoAnimationScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None)
+            };
+        }
+
+
+
+        /// <summary>
+        /// Displays text on the DMD device.
+        /// %0A o | para salto de linea
+        /// </summary>
+        public static bool AdvancedDisplay(string text, string path, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animationIn, string animationOut, float duration)
+        {
+            try
+            {
+                // Convert size to numeric value based on device dimensions
+                size = GetFontSize(size, gDmdDevice.Width, gDmdDevice.Height);
+
+                // Determine if border is needed
+                int border = bordersize != "0" ? 1 : 0;
+
+                var bgActor = new Actor();
+
+                if (!string.IsNullOrEmpty(path))
+                {
+                    path = AppSettings.artworkPath + "/" + path;
+                    string localPath = HttpUtility.UrlDecode(path);
+
+                    List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
+
+                    if (FileExistsWithExtensions(localPath, extensions, out string foundExtension))
+                    {
+                        string fullPath = localPath + foundExtension;
+
+                        List<string> videoExtensions = new List<string> { ".gif", ".avi", ".mp4" };
+                        List<string> imageExtensions = new List<string> { ".png", ".jpg", ".bmp" };
+
+                        if (videoExtensions.Contains(foundExtension.ToLower()))
+                        {
+                            bgActor = (AnimatedActor)gDmdDevice.NewVideo("MyVideo", fullPath);
+                            bgActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
+                        }
+                        else if (imageExtensions.Contains(foundExtension.ToLower()))
+                        {
+                            bgActor = (Actor)gDmdDevice.NewImage("MyImage", fullPath);
+                            bgActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
+                        }
+                    }
+                }
+
+                //gDmdDevice.LockRenderThread();
+                gDmdDevice.Post(() =>
+                {
+                    // Create font and label actor
+                    FlexDMD.Font myFont = gDmdDevice.NewFont($"resources/{font}_{size}.fnt", HexToColor(color), HexToColor(bordercolor), border);
+                    var labelActor = (Actor)gDmdDevice.NewLabel("MyLabel", myFont, text);
+
+                    if (cleanbg)
+                    {
+                        _queue.RemoveAllScenes();
+                    }
+
+                    // Create advanced scene
+                    var bg = new AdvancedScene(gDmdDevice, bgActor, text, myFont,
+                                               (AnimationType)Enum.Parse(typeof(AnimationType), animationIn),
+                                               duration,
+                                               (AnimationType)Enum.Parse(typeof(AnimationType), animationOut),
+                                               "");
+
+                    _queue.Visible = true;
+
+                    // Add scene to the queue or directly to the stage
+                    if (cleanbg)
+                    {
+                        _queue.Enqueue(bg);
+                    }
+                    else
+                    {
+                        gDmdDevice.Stage.AddActor(bg);
+                    }
+                });
+                //gDmdDevice.UnlockRenderThread();
+
+                LogIt($"Rendering text: {text}");
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         /// <summary>
         /// Handle incoming HTTP requests
         /// </summary>
@@ -379,13 +612,13 @@ namespace DOF2DMD
         /// <summary>
         /// Convert Hex Color to Int
         /// </summary>
-        public static int HexToInt(string hexColor)
+        public static Color HexToColor(string hexColor)
         {
 
             // Convert hexadecimal to integer
-            int intValue = Int32.Parse(hexColor, System.Globalization.NumberStyles.HexNumber);
+            Color _color = System.Drawing.ColorTranslator.FromHtml("#" + hexColor);
 
-            return intValue;
+            return _color;
         }
         // Función que comprueba si existe un archivo con alguna de las extensiones
         public static bool FileExistsWithExtensions(string fileNameWithoutExtension, List<string> extensions, out string foundExtension)
@@ -420,8 +653,14 @@ namespace DOF2DMD
                 {
                     case "blank":
                         gGameMarquee = "";
-                        gUDmdDevice.CancelRendering();
-                        gUDmdDevice.Clear();
+                        gDmdDevice.Post(() =>
+                        {
+                            LogIt("Cancel Rendering");
+                            _queue.RemoveAllScenes();
+                            gDmdDevice.Graphics.Clear(Color.Black);
+                            _scoreBoard.Visible = false;
+                            if (_queue.IsFinished()) _queue.Visible = false;
+                        });
                         break;
                     case "exit":
                         Environment.Exit(0);
@@ -434,10 +673,9 @@ namespace DOF2DMD
                         {
                             case "picture":
                                 string picturepath = query.Get("path");
-                                float pictureduration = float.Parse(query.Get("duration"));
-                                string sfixed = "";
-                                if (query.Get("fixed") != null)
-                                    sfixed = query.Get("fixed");
+                                float pictureduration = float.TryParse(query.Get("duration"), out float result) ? result : -1.0f;
+                                string pictureanimation = query.Get("animation") ?? "none";
+                                
                                 if (query.Count == 1)
                                 {
                                     // This is certainly a game marquee, provided during new game
@@ -448,9 +686,13 @@ namespace DOF2DMD
                                     for (int i = 1; i <= 4; i++)
                                         gScore[i] = 0;
                                 }
-                                if (!DisplayPicture(picturepath, sfixed == "true", pictureduration))
+                                if (!DisplayPicture(picturepath, pictureduration, pictureanimation))
                                 {
-                                    sReturn = $"Picture not found: {picturepath}";
+                                    sReturn = $"Picture or video not found: {picturepath}";
+                                }
+                                else
+                                {
+                                    sReturn = "OK";
                                 }
                                 break;
                             case "text":
@@ -460,14 +702,16 @@ namespace DOF2DMD
                                 string font = query.Get("font") ?? "bm_army-12";
                                 string bordercolor = query.Get("bordercolor") ?? "red";
                                 string bordersize = query.Get("bordersize") ?? "1";
-                                LogIt($"Text is now set to: {text} with size {size} ,color {color} ,font {font} ,border color {bordercolor} and border size {bordersize}");
+                                string animation = query.Get("animation") ?? "none";
+                                float textduration = float.Parse(query.Get("duration"));
+                                LogIt($"Text is now set to: {text} with size {size} ,color {color} ,font {font} ,border color {bordercolor}, border size {bordersize}, animation {animation} with a duration of {textduration} seconds");
                                 bool cleanbg;
                                 if (!bool.TryParse(query.Get("cleanbg"), out cleanbg))
                                 {
                                     cleanbg = true; // valor predeterminado si la conversión falla
                                 }
 
-                                if (DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg))
+                                if (DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration))
                                 {
                                     sReturn = "OK";
                                 }
@@ -475,6 +719,54 @@ namespace DOF2DMD
                                 {
                                     sReturn = "Error when displaying text";
                                 }
+                                break;
+                            case "advanced":
+                                string advtext = query.Get("text") ?? "";
+                                string advpath = query.Get("path") ?? "";
+                                string advsize = query.Get("size") ?? "M";
+                                string advcolor = query.Get("color") ?? "white";
+                                string advfont = query.Get("font") ?? "bm_army-12";
+                                string advbordercolor = query.Get("bordercolor") ?? "red";
+                                string advbordersize = query.Get("bordersize") ?? "1";
+                                string animationIn = query.Get("animationin") ?? "none";
+                                string animationOut = query.Get("animationout") ?? "none";
+                                float advtextduration = float.Parse(query.Get("duration"));
+                                LogIt($"Advanced Text is now set to: {advtext} with size {advsize} ,color {advcolor} ,font {advfont} ,border color {advbordercolor}, border size {advbordersize}, animation In {animationIn}, animation Out {animationOut} with a duration of {advtextduration} seconds");
+                                bool advcleanbg;
+                                if (!bool.TryParse(query.Get("cleanbg"), out advcleanbg))
+                                {
+                                    cleanbg = true; // valor predeterminado si la conversión falla
+                                }
+
+                                if (AdvancedDisplay(advtext, advpath, advsize, advcolor, advfont, advbordercolor, advbordersize, advcleanbg, animationIn, animationOut, advtextduration))
+                                {
+                                    sReturn = "OK";
+                                }
+                                else
+                                {
+                                    sReturn = "Error when displaying advanced scene";
+                                }
+                                break;
+                            case "score":
+                                // [url_prefix]/v1/display/score?players=<number of players>&activeplayer=<active player>&score=<score>
+                                gActivePlayer = int.Parse(query.Get("activeplayer"));
+                                gScore[gActivePlayer] = int.Parse(query.Get("score"));
+                                gNbPlayers = int.Parse(query.Get("players"));
+                                bool sCleanbg;
+                                if (!bool.TryParse(query.Get("cleanbg"), out sCleanbg))
+                                {
+                                    sCleanbg = true; // valor predeterminado si la conversión falla
+                                }
+
+                                if (DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], sCleanbg))
+                                {
+                                    sReturn = "Ok";
+                                }
+                                else
+                                {
+                                    sReturn = "Error when displaying score board";
+                                }
+
                                 break;
                             default:
                                 sReturn = "Not implemented";
@@ -523,6 +815,469 @@ namespace DOF2DMD
         {
             base.Update(delta);
             _background?.SetSize(Width, Height);
+        }
+    }
+    class NoAnimationScene : BackgroundScene
+    {
+        private readonly Group _container;
+        private readonly float _length;
+
+        public NoAnimationScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        {
+            _container = new Group(FlexDMD);
+            // There is nothing obvious in UltraDMD that gives hint on the timing, so I choosed one.
+
+            AddActor(_container);
+            var y = 0f;
+            string[] lines = text.Split(new char[] { '\n', '|' });
+
+            _length = pauseS;
+
+            foreach (string line in lines)
+            {
+                //var txt = line.Trim();
+                var txt = line;
+                if (txt.Length == 0) txt = " ";
+                var label = new FlexDMD.Label(flex, font, txt);
+                label.Y = y;
+                y += label.Height;
+                label.Alignment = Alignment.Left;
+                _container.AddActor(label);
+            }
+            _container.Height = y;
+        }
+
+        protected override void Begin()
+        {
+            base.Begin();
+            _container.Y = (Height - _container.Height) / 2;
+            var action1 = new FlexDMD.WaitAction(_length);
+            var action2 = new FlexDMD.ShowAction(_container, false);
+            var sequenceAction = new FlexDMD.SequenceAction();
+
+            sequenceAction.Add(action1);
+            sequenceAction.Add(action2);
+
+            _container.AddAction(sequenceAction);
+            //_tweener.Tween(_container, new { Y = -_container.Height }, _length, 0f);
+
+        }
+
+        public override void Update(float delta)
+        {
+            base.Update(delta);
+            if (_container.Width != Width)
+            {
+                _container.Width = Width;
+                foreach (Actor line in _container.Children)
+                {
+                    line.X = (Width - line.Width) / 2;
+                }
+            }
+        }
+    }
+    class AdvancedScene : BackgroundScene
+    {
+        private readonly Group _container;
+        private readonly float _length;
+
+        public AdvancedScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        {
+            _container = new Group(FlexDMD);
+            // There is nothing obvious in UltraDMD that gives hint on the timing, so I choosed one.
+
+            AddActor(_container);
+            var y = 0f;
+            string[] lines = text.Split(new char[] { '\n', '|' });
+
+            _length = pauseS;
+
+            foreach (string line in lines)
+            {
+                //var txt = line.Trim();
+                var txt = line;
+                if (txt.Length == 0) txt = " ";
+                var label = new FlexDMD.Label(flex, font, txt);
+                label.Y = y;
+                y += label.Height;
+                label.Alignment = Alignment.Left;
+                _container.AddActor(label);
+            }
+            _container.Height = y;
+        }
+        protected override void Begin()
+        {
+            base.Begin();
+            _container.Y = (Height - _container.Height) / 2;
+        }
+        public override void Update(float delta)
+        {
+            base.Update(delta);
+            if (_container.Width != Width)
+            {
+                _container.Width = Width;
+                foreach (Actor line in _container.Children)
+                {
+                    line.X = (Width - line.Width) / 2;
+                }
+            }
+        }
+    }
+    class ScrollingUpScene : BackgroundScene
+    {
+        private readonly Group _container;
+        private readonly float _length;
+
+        public ScrollingUpScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        {
+            _container = new Group(FlexDMD);
+            // There is nothing obvious in UltraDMD that gives hint on the timing, so I choosed one.
+
+            AddActor(_container);
+            var y = 0f;
+            string[] lines = text.Split(new char[] { '\n', '|' });
+
+            _length = 3f + lines.Length * 0.2f;
+
+            foreach (string line in lines)
+            {
+                //var txt = line.Trim();
+                var txt = line;
+                if (txt.Length == 0) txt = " ";
+                var label = new FlexDMD.Label(flex, font, txt);
+                label.Y = y;
+                y += label.Height;
+                _container.AddActor(label);
+            }
+            _container.Height = y;
+        }
+
+        protected override void Begin()
+        {
+            base.Begin();
+            _container.Y = Height;
+            _tweener.Tween(_container, new { Y = -_container.Height }, _length, 0f);
+        }
+
+        public override void Update(float delta)
+        {
+            base.Update(delta);
+            if (_container.Width != Width)
+            {
+                _container.Width = Width;
+                foreach (Actor line in _container.Children)
+                {
+                    line.X = (Width - line.Width) / 2;
+                }
+            }
+        }
+    }
+    class ScrollingDownScene : BackgroundScene
+    {
+        private readonly Group _container;
+        private readonly float _length;
+
+        public ScrollingDownScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        {
+            _container = new Group(FlexDMD);
+            // There is nothing obvious in UltraDMD that gives hint on the timing, so I choosed one.
+
+            AddActor(_container);
+            var y = 0f;
+            string[] lines = text.Split(new char[] { '\n', '|' });
+
+            _length = 3f + lines.Length * 0.2f;
+
+            foreach (string line in lines)
+            {
+                //var txt = line.Trim();
+                var txt = line;
+                if (txt.Length == 0) txt = " ";
+                var label = new FlexDMD.Label(flex, font, txt);
+                label.Y = y;
+                y += label.Height;
+                _container.AddActor(label);
+            }
+            _container.Height = y;
+        }
+
+        protected override void Begin()
+        {
+            base.Begin();
+            _container.Y = -_container.Height;
+            _tweener.Tween(_container, new { Y = Height * 1.02f }, _length, 0f);
+        }
+
+        public override void Update(float delta)
+        {
+            base.Update(delta);
+            if (_container.Width != Width)
+            {
+                _container.Width = Width;
+                foreach (Actor line in _container.Children)
+                {
+                    line.X = (Width - line.Width) / 2;
+                }
+            }
+        }
+    }
+    class ScrollingLeftScene : BackgroundScene
+    {
+        private readonly Group _container;
+        private readonly float _length;
+
+        public ScrollingLeftScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn , float pauseS, AnimationType animateOut , string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        {
+            _container = new Group(FlexDMD);
+            // There is nothing obvious in UltraDMD that gives hint on the timing, so I choosed one.
+            
+            AddActor(_container);
+            var y = 0f;
+            string[] lines = text.Split(new char[] { '\n', '|' });
+
+            _length = 3f + lines.Length * 0.2f;
+
+            foreach (string line in lines)
+            {
+                //var txt = line.Trim();
+                var txt = line;
+                if (txt.Length == 0) txt = " ";
+                var label = new FlexDMD.Label(flex, font, txt);
+                label.Y = y;
+                y += label.Height;
+                _container.AddActor(label);
+            }
+            _container.Height = y;
+        }
+
+        protected override void Begin()
+        {
+            base.Begin();
+
+            _container.Y = (Height - _container.Height) / 2;
+            _container.X = Width;
+            _tweener.Tween(_container, new { X = -Width }, _length, 0f);
+        }
+
+        public override void Update(float delta)
+        {
+            base.Update(delta);
+            if (_container.Width != Width)
+            {
+                _container.Width = Width;
+                foreach (Actor line in _container.Children)
+                {
+                    line.X = (Width - line.Width) /2;
+                }
+            }
+        }
+    }
+    class ScrollingRightScene : BackgroundScene
+    {
+        private readonly Group _container;
+        private readonly float _length;
+
+        public ScrollingRightScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        {
+            _container = new Group(FlexDMD);
+            // There is nothing obvious in UltraDMD that gives hint on the timing, so I choosed one.
+            _length = 3f + text.Length * 0.2f;
+            AddActor(_container);
+            var y = 0f;
+            string[] lines = text.Split(new char[] { '\n', '|' });
+
+            _length = 3f + lines.Length * 0.2f;
+
+            foreach (string line in lines)
+            {
+                //var txt = line.Trim();
+                var txt = line;
+                if (txt.Length == 0) txt = " ";
+                var label = new FlexDMD.Label(flex, font, txt);
+                label.Y = y;
+                y += label.Height;
+                _container.AddActor(label);
+            }
+            _container.Height = y;
+        }
+
+        protected override void Begin()
+        {
+            base.Begin();
+            _container.Y = (Height - _container.Height) / 2;
+            _container.X = -Width;
+            _tweener.Tween(_container, new { X = Width }, _length, 0f);
+        }
+
+        public override void Update(float delta)
+        {
+            base.Update(delta);
+            if (_container.Width != Width)
+            {
+                _container.Width = Width;
+                foreach (Actor line in _container.Children)
+                {
+                    line.X = (Width - line.Width) / 2;
+                }
+            }
+        }
+    }
+
+    class ScoreBoard : Group
+    {
+        private readonly FlexDMD.Label[] _scores = new FlexDMD.Label[4];
+        private Actor _background = null;
+        private int _highlightedPlayer = 0;
+        private int _nplayers;
+        public FlexDMD.Label _lowerLeft, _lowerRight;
+
+        public FlexDMD.Font ScoreFont { get; private set; }
+        public FlexDMD.Font HighlightFont { get; private set; }
+        public FlexDMD.Font TextFont { get; private set; }
+
+        public ScoreBoard(IFlexDMD flex, FlexDMD.Font scoreFont, FlexDMD.Font highlightFont, FlexDMD.Font textFont) : base(flex)
+        {
+            ScoreFont = scoreFont;
+            HighlightFont = highlightFont;
+            TextFont = textFont;
+            _lowerLeft = new FlexDMD.Label(flex, textFont, "");
+            _lowerRight = new FlexDMD.Label(flex, textFont, "");
+            AddActor(_lowerLeft);
+            AddActor(_lowerRight);
+            for (int i = 0; i < 4; i++)
+            {
+                _scores[i] = new FlexDMD.Label(flex, scoreFont, "0");
+                AddActor(_scores[i]);
+            }
+        }
+
+        public void SetBackground(Actor background)
+        {
+            if (_background != null)
+            {
+                RemoveActor(_background);
+                if (_background is IDisposable e) e.Dispose();
+            }
+            _background = background;
+            if (_background != null)
+            {
+                AddActorAt(_background, 0);
+            }
+        }
+
+        public void SetNPlayers(int nPlayers)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                _scores[i].Visible = i < nPlayers;
+            }
+            _nplayers = nPlayers;
+        }
+
+        public void SetFonts(FlexDMD.Font scoreFont, FlexDMD.Font highlightFont, FlexDMD.Font textFont)
+        {
+            ScoreFont = scoreFont;
+            HighlightFont = highlightFont;
+            TextFont = textFont;
+            SetHighlightedPlayer(_highlightedPlayer);
+            _lowerLeft.Font = textFont;
+            _lowerRight.Font = textFont;
+        }
+
+        public void SetHighlightedPlayer(int player)
+        {
+            _highlightedPlayer = player;
+            for (int i = 0; i < 4; i++)
+            {
+                if (i == player - 1)
+                {
+                    _scores[i].Font = HighlightFont;
+                }
+                else
+                {
+                    _scores[i].Font = ScoreFont;
+                }
+            }
+        }
+
+        public void SetScore(Int64 score1, Int64 score2, Int64 score3, Int64 score4)
+        {
+            _scores[0].Text = score1.ToString("#,##0");
+            _scores[1].Text = score2.ToString("#,##0");
+            _scores[2].Text = score3.ToString("#,##0");
+            _scores[3].Text = score4.ToString("#,##0");
+        }
+
+        public override void Update(float delta)
+        {
+            base.Update(delta);
+            SetBounds(0, 0, Parent.Width, Parent.Height);
+            float yText = Height - TextFont.BitmapFont.BaseHeight - 1;
+            // float yLine2 = 1 + HighlightFont.BitmapFont.BaseHeight + (Height - 2 - TextFont.BitmapFont.BaseHeight - 2 * HighlightFont.BitmapFont.BaseHeight) / 2;
+            float yLine2 = (Height - TextFont.BitmapFont.BaseHeight) / 2f;
+            float dec = (HighlightFont.BitmapFont.BaseHeight - ScoreFont.BitmapFont.BaseHeight) / 2f;
+            // float yLine2 = (1 + yText) * 0.5f;
+            _scores[0].Pack();
+            _scores[1].Pack();
+            _scores[2].Pack();
+            _scores[3].Pack();
+            _lowerLeft.Pack();
+            _lowerRight.Pack();
+            switch (_nplayers)
+            {
+                case 1:
+                    _scores[0].Visible = true;
+                    _scores[0].SetAlignedPosition(Width/2, (Height - (_highlightedPlayer == 1 ? 0 : dec))/2, Alignment.Center);
+                    _scores[1].Visible = false;
+                    _scores[2].Visible = false;
+                    _scores[3].Visible = false;
+                    _lowerLeft.SetAlignedPosition(1, yText, Alignment.TopLeft);
+                    _lowerRight.SetAlignedPosition(Width - 1, yText, Alignment.TopRight);
+                break;
+                case 2:
+                    _scores[0].Visible = true;
+                    _scores[0].SetAlignedPosition(1, (Height - (_highlightedPlayer == 1 ? 0 : dec))/2, Alignment.Left);
+                    _scores[1].Visible = true;
+                    _scores[1].SetAlignedPosition(Width - 1, (Height - (_highlightedPlayer == 2 ? 0 : dec))/2, Alignment.Right);
+                    _scores[2].Visible = false;
+                    _scores[3].Visible = false;
+                    _lowerLeft.SetAlignedPosition(1, yText, Alignment.TopLeft);
+                    _lowerRight.SetAlignedPosition(Width - 1, yText, Alignment.TopRight);
+                break;
+                case 3:
+                    _scores[0].Visible = true;
+                    _scores[1].Visible = true;
+                    _scores[2].Visible = true;
+                    _scores[3].Visible = false;
+                    _scores[0].SetAlignedPosition(1, 1 + (_highlightedPlayer == 1 ? 0 : dec), Alignment.TopLeft);
+                    _scores[1].SetAlignedPosition(Width - 1, 1 + (_highlightedPlayer == 2 ? 0 : dec), Alignment.TopRight);
+                    _scores[2].SetAlignedPosition(Width/2, Height/5.2f + yLine2 + (_highlightedPlayer == 3 ? 0 : dec)  , Alignment.Center);
+                    _lowerLeft.SetAlignedPosition(1, yText, Alignment.TopLeft);
+                    _lowerRight.SetAlignedPosition(Width - 1, yText, Alignment.TopRight);
+                break;
+                case 4:
+                    _scores[0].Visible = true;
+                    _scores[1].Visible = true;
+                    _scores[2].Visible = true;
+                    _scores[3].Visible = true;
+                    _scores[0].SetAlignedPosition(1, 1 + (_highlightedPlayer == 1 ? 0 : dec), Alignment.TopLeft);
+                    _scores[1].SetAlignedPosition(Width - 1, 1 + (_highlightedPlayer == 2 ? 0 : dec), Alignment.TopRight);
+                    _scores[2].SetAlignedPosition(1, yLine2 + (_highlightedPlayer == 3 ? 0 : dec), Alignment.TopLeft);
+                    _scores[3].SetAlignedPosition(Width - 1, yLine2 + (_highlightedPlayer == 4 ? 0 : dec), Alignment.TopRight);
+                    _lowerLeft.SetAlignedPosition(1, yText, Alignment.TopLeft);
+                    _lowerRight.SetAlignedPosition(Width - 1, yText, Alignment.TopRight);
+                break;
+            }
+        }
+
+        public override void Draw(Graphics graphics)
+        {
+            if (Visible)
+            {
+                //graphics.Clear(Color.Black);
+                _background?.SetSize(Width, Height);
+                base.Draw(graphics);
+            }
         }
     }
 }

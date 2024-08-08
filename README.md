@@ -8,8 +8,9 @@ and animations on a real or emulated DMD device.
 It covers the following use cases:
 
 - Starting the game: showing the game marquee
-- Score: showing the score for 1 up to 4 players
-- Events: showing animations based on events in the game (eg shooting down a plane in 1942 will trigger an explosion)
+- Score: showing the score for 1 up to 4 players with diferent layouts depending of the number of players
+- Events: showing images, videos or gif animations based on events in the game (eg shooting down a plane in 1942 will trigger an explosion)
+- Text: showing text with diferent fonts, sizes and animations based on events
 
 DOF2DMD offers a simple HTTP API (see [API](#api)) to display pictures, animations and scores.
 
@@ -86,12 +87,15 @@ There are example aseprite files in [the `ingame.src` folder](/DOF2DMD/artwork/i
 
 DOF2DMD is a server listening to simple http request. Once it has started, you can use the following :
 
-- `[url_prefix]/v1/display/picture?path=<path>?fixed=true|false`
-  - Display an image or video
+- `[url_prefix]/v1/display/picture?path=<path>&animation=fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None&duration=seconds`
+  - Display an image, gif animation or video. If the duration is 0 in an animation/video, it will be limited to the duration of the video or animation  
   - **path**: The file path of the image or video to be displayed
   - **fixed**: A boolean flag indicating whether the file must be forced to fixed (not a gif)
-- `[url_prefix]/v1/display/score?player=<player>&score=<score>`
-  - **player**: optional : the identifier of the player whose score is being displayed (1, 2, 3 or 4)
+  - **duration**: If the duration is 0 in an animation/video, it will be limited to the duration of the video or animation. If the time is -1, it will be permanent
+  - **animation**: 
+- `[url_prefix]/v1/display/score?players=<number of players>&activeplayer=<active player>&score=<score>`
+  - **players**: the number of players for score layout
+  - **activeplayer**: the highlighted player
   - **score**: The score value to be displayed for active player
 - `[url_prefix]/v1/blank`
   - This endpoint clears or blanks the display
@@ -103,14 +107,17 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
   - Displays a background image to display behind the score.
   - **path**: The file path of the background image to be displayed
   - **brightness**: The brightness level of the background image, ranging from 0 to 15
-- NOT IMPLEMENTED: `[url_prefix]/v1/display/text?text=<text>?size=S|M|L&color=#FFFFFF&font=font&bordercolor=color&bordersize=size`
+- NOT IMPLEMENTED: `[url_prefix]/v1/display/text?text=<text>?size=S|M|L|XL&color=<hex color>&font=font&bordercolor=<hex color>&bordersize=0|1&cleanbg=<true|false>&animation=ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None&duration=seconds`
   - Display some text
   - **text**: The text to be displayed
-  - **size**: The size of the text (Small, Medium, or Large)
+  - **size**: The size of the text (Small (S), Medium (M), Large (L) or Extra Large (XL))
   - **color**: The color of the text in hexadecimal format
   - **font**: The font family to be used for the text
   - **bordercolor**: The color of the text border in hexadecimal format
-  - **bordersize**: The size of the text border
+  - **bordersize**: The size of the text border (0 or 1)
+  - **cleanbg**: Clean the active screen
+  - **animation**: Text animation
+  - **duration**: time to present the text in the DMD (If an animation is selected, the screen will remain black once the animation ends if the time is longer than the animation itself. If the time is -1, it will be permanent)
 - NOT IMPLEMENTED: `[url_prefix]/v1/display/scene?background=<image or video path>&toptext=<text>&topbrightness=<brightness 0 - 15>&bottomtext=<text>&bottombrightness=<brightness 0 - 15>&animatein=<0 - 15>&animateout=<0 - 15>&pausetime=<pause in ms>`
   - Display some text with a background image or video
   - **background**: The file path of the background image or video
