@@ -119,7 +119,7 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
   - **cleanbg**: Clean the active screen
   - **animation**: Text animation
   - **duration**: time to present the text in the DMD (If an animation is selected, the screen will remain black once the animation ends if the time is longer than the animation itself. If the time is -1, it will be permanent)
-- `[url_prefix]/v1/display/advanced?path=<image or video path>&text=<text>&size=XS|S|M|L|XL&color=<hex color>&font=font&bordercolor=<hex color>&bordersize=0|1&cleanbg=<true|false>&animationin=&animationOut&duration=seconds``
+- `[url_prefix]/v1/display/advanced?path=<image or video path>&text=<text>&size=XS|S|M|L|XL&color=<hex color>&font=font&bordercolor=<hex color>&bordersize=0|1&cleanbg=<true|false>&animationin=&animationOut&duration=seconds`
   - Display some text or image/video/gif animation or text over image/video/animation
   - **path**: The file path of the background image, video or gif animation
   - **text**: The text to be displayed
