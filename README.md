@@ -107,10 +107,10 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
   - Displays a background image to display behind the score.
   - **path**: The file path of the background image to be displayed
   - **brightness**: The brightness level of the background image, ranging from 0 to 15
-- NOT IMPLEMENTED: `[url_prefix]/v1/display/text?text=<text>?size=S|M|L|XL&color=<hex color>&font=font&bordercolor=<hex color>&bordersize=0|1&cleanbg=<true|false>&animation=ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None&duration=seconds`
+- `[url_prefix]/v1/display/text?text=<text>&size=XS|S|M|L|XL&color=<hex color>&font=font&bordercolor=<hex color>&bordersize=0|1&cleanbg=<true|false>&animation=ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None&duration=seconds`
   - Display some text
   - **text**: The text to be displayed
-  - **size**: The size of the text (Small (S), Medium (M), Large (L) or Extra Large (XL))
+  - **size**: The size of the text (Extra Small (XS), Small (S), Medium (M), Large (L) or Extra Large (XL))
   - **color**: The color of the text in hexadecimal format
   - **font**: The font family to be used for the text
   - **bordercolor**: The color of the text border in hexadecimal format
@@ -118,16 +118,20 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
   - **cleanbg**: Clean the active screen
   - **animation**: Text animation
   - **duration**: time to present the text in the DMD (If an animation is selected, the screen will remain black once the animation ends if the time is longer than the animation itself. If the time is -1, it will be permanent)
-- NOT IMPLEMENTED: `[url_prefix]/v1/display/scene?background=<image or video path>&toptext=<text>&topbrightness=<brightness 0 - 15>&bottomtext=<text>&bottombrightness=<brightness 0 - 15>&animatein=<0 - 15>&animateout=<0 - 15>&pausetime=<pause in ms>`
-  - Display some text with a background image or video
-  - **background**: The file path of the background image or video
-  - **toptext**: The text to be displayed at the top of the scene
-  - **topbrightness**: The brightness level of the top text, ranging from 0 to 15
-  - **bottomtext**: The text to be displayed at the bottom of the scene
-  - **bottombrightness**: The brightness level of the bottom text, ranging from 0 to 15
-  - **animatein**: The animation effect for the scene entrance, ranging from 0 to 15
-  - **animateout**: The animation effect for the scene exit, ranging from 0 to 15
-  - **pausetime**: The duration in milliseconds for which the scene should be displayed
+- `[url_prefix]/v1/display/advanced?path=<image or video path>&text=<text>&size=XS|S|M|L|XL&color=<hex color>&font=font&bordercolor=<hex color>&bordersize=0|1&cleanbg=<true|false>&animationin=&animationOut&duration=seconds``
+  - Display some text or image/video/gif animation or text over image/video/animation
+  - **path**: The file path of the background image, video or gif animation
+  - **text**: The text to be displayed
+  - **size**: The size of the text (Extra Small (XS), Small (S), Medium (M), Large (L) or Extra Large (XL))
+  - **color**: The color of the text in hexadecimal format
+  - **font**: The font family to be used for the text
+  - **bordercolor**: The color of the text border in hexadecimal format
+  - **bordersize**: The size of the text border (0 or 1)
+  - **cleanbg**: Clean the active screen
+  - **animationIn**: Animation to be applied to the scene when starts (FadeIn, ScrollOnLeft, ScrollOnRight, ScrollOnDown, ScrollOnUp, FillFadeIn, None)
+  - **animationOut**: Animation to be applied to the scene when ends (FadeOut, ScrollOffLeft, ScrollOffRight, ScrollOffDown, ScrollOffUp, FillFadeOut, None)
+  - **duration**: time to present the scene in the DMD. If the time is -1, it will be permanent
+  
 
 ## Use in DOFLinx
 
