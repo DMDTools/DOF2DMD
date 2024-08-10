@@ -222,7 +222,7 @@ Here is what I plan to implement :
 - A plugin for [Launch box / big box](http://pluginapi.launchbox-app.com/) which
   interfaces with DOF2DMD to show systems and game marquees when browsing
   games (partially implemented)
-- Better score display
+
 
 ## 💬 Questions and support
 
@@ -244,4 +244,4 @@ Thanks to
   which is a nice and cheap DMD. You can buy ZeDMD in multiple places.
 - Everyone at [Monte Ton Cab (FR)](https://montetoncab.fr/) - what a welcoming
   community!
-- [@gustavoalara](https://github.com/gustavoalara) for the first pull request to this project!
+- Olivier Jacques @ojacques (https://github.com/ojacques) for start this project
