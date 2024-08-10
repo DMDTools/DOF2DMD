@@ -93,10 +93,11 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
   - **fixed**: A boolean flag indicating whether the file must be forced to fixed (not a gif)
   - **duration**: If the duration is 0 in an animation/video, it will be limited to the duration of the video or animation. If the time is -1, it will be permanent
   - **animation**: 
-- `[url_prefix]/v1/display/score?players=<number of players>&activeplayer=<active player>&score=<score>`
+- `[url_prefix]/v1/display/score?players=<number of players>&activeplayer=<active player>&score=<score>&cleanbg=true|false`
   - **players**: the number of players for score layout
   - **activeplayer**: the highlighted player
   - **score**: The score value to be displayed for active player
+  - **cleanbg**: Clean the active screen
 - `[url_prefix]/v1/blank`
   - This endpoint clears or blanks the display
 - `[url_prefix]/v1/exit`
@@ -169,13 +170,14 @@ DOFLinx will generate the following commands automatically:
 
 - When starting DOFLinx:
   - `http://<host:port>/v1/version` - to check that DOF2DMD is up. DOFLinx will attempt to start it otherwise.
-  - `http://<host:port>/v1/display/picture?path=mame/DOFLinx` - to display the DOFLinx welcome picture
+  - `http://<host:port>/v1/display/picture?path=mame/DOFLinx&duration=5&animation=fade` - to display the DOFLinx welcome picture with a duration of 5 seconds and a Fade animation
 - When starting a game:
-  - `http://<host:port>/v1/display/picture?path=mame/<rom-name>&fixed=true` - to display a PNG for the marquee
+  - `http://<host:port>/v1/display/picture?path=mame/<rom-name>&duration=-1&animation=none` - to display a image/video or gif animation for the marquee without animation
 - When playing a game:
-  - `http://<host:port>/v1/display/score?player=<player>&score=<score>` - to display score of the given player
+  - `http://<host:port>[/v1/display/score?players=2&activeplayer=1&score=1999&cleanbg=false` - to display score of the given player using 2 players layout
+  - `http://<host:port>[/v1/display/text?text=GREAT|Shoot!&size=M&color=f99820&font=BTTF&bordercolor=0089cf&bordersize=1&cleanbg=true&duration=10&animation=ScrollRight` - to display a text in two lines ('|' character divides the text) with a medium size Back to the Future Font, orange color text, with a blue text border during 10 seconds with a Scrolling from the right and cleaning the previous scene
 - When closing DOFLinx:
-  - `http://<host:port>/v1/display/score?player=1&score=0` - reset score to 0
+  - `http://<host:port>/v1/display/score?players=2&activeplayer=1&score=0` - reset score to 0
   - `http://<host:port>/v1/blank` - to clear the DMD (goes to black)
   - `http://<host:port>/v1/exit` - to instruct DOF2DMD to exit cleanly
 
