@@ -413,7 +413,7 @@ namespace DOF2DMD
                 }
                 else
                 {
-                    localFontPath = $"resources/Consoles_{size}.fnt";
+                    localFontPath = $"resources/Consolas_{size}.fnt";
                     LogIt($"Font not found, using default: {localFontPath}");
                 }
 
@@ -525,7 +525,7 @@ namespace DOF2DMD
                 }
                 else
                 {
-                    localFontPath = $"resources/Consoles_{size}.fnt";
+                    localFontPath = $"resources/Consolas_{size}.fnt";
                     LogIt($"Font not found, using default: {localFontPath}");
                 }
 
@@ -780,7 +780,7 @@ namespace DOF2DMD
                                 string text = query.Get("text") ?? "";
                                 string size = query.Get("size") ?? "M";
                                 string color = query.Get("color") ?? "FFFFFF";
-                                string font = query.Get("font") ?? "Consoles";
+                                string font = query.Get("font") ?? "Consolas";
                                 string bordercolor = query.Get("bordercolor") ?? "000000";
                                 string bordersize = query.Get("bordersize") ?? "0";
                                 string animation = query.Get("animation") ?? "none";
@@ -806,7 +806,7 @@ namespace DOF2DMD
                                 string advpath = query.Get("path") ?? "";
                                 string advsize = query.Get("size") ?? "M";
                                 string advcolor = query.Get("color") ?? "FFFFFF";
-                                string advfont = query.Get("font") ?? "Consoles";
+                                string advfont = query.Get("font") ?? "Consolas";
                                 string advbordercolor = query.Get("bordercolor") ?? "0000FF";
                                 string advbordersize = query.Get("bordersize") ?? "0";
                                 string animationIn = query.Get("animationin") ?? "none";
