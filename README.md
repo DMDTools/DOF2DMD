@@ -90,27 +90,33 @@ There are example aseprite files in [the `ingame.src` folder](/DOF2DMD/artwork/i
 DOF2DMD is a server listening to simple http request. Once it has started, you can use the following :
 
 - `[url_prefix]/v1/display/picture?path=<image or video path>&animation=<fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=s<econds>`
-  - Display an image, gif animation or video. 
+  Display an image, gif animation or video.
   - **path**: The file path of the image or video to be displayed
   - **duration**: If the duration is 0 in an animation/video, it will be limited to the duration of the video or animation. If the time is -1, it will be permanent
   - **animation**: The animation applied to the scene fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None
-- `[url_prefix]/v1/display/score?players=<number of players>&activeplayer=<active player>&score=<score>&cleanbg=<true|false>&credits=<credits>`
+- `[url_prefix]/v1/display/score?player=<active player>&score=<score>&cleanbg=<true|false>`
+  Display a score board of 4 players
+  - **player**: the highlighted player
+  - **score**: The score value to be displayed for active player
+  - **cleanbg**: Clean the active screen (when not cleaned the score will showed over the current image/animation
+- `[url_prefix]/v1/display/scorev2?players=<number of players>&activeplayer=<active player>&score=<score>&cleanbg=<true|false>&credits=<credits>`
+  Display an advanced score board using a layout from 1 to 4 players and credits**
   - **players**: the number of players for score layout
   - **activeplayer**: the highlighted player
   - **score**: The score value to be displayed for active player
   - **cleanbg**: Clean the active screen (when not cleaned the score will showed over the current image/animation
   - **credits**: Credits inserted in the game
 - `[url_prefix]/v1/display/scorebackground?path=<image or video path>`
-  - Add an image, gif animation or video as background on the Score board. 
+  Add an image, gif animation or video as background on the Score board. 
   - **path**: The file path of the image or video to be displayed/added to de Score Board
 - `[url_prefix]/v1/blank`
-  - This endpoint clears or blanks the display
+  This endpoint clears or blanks the display
 - `[url_prefix]/v1/exit`
-  - This endpoint exits or closes the application
+  This endpoint exits or closes the application
 - `[url_prefix]/v1/version`
-  - This endpoint returns the version information of the application
+  This endpoint returns the version information of the application
 - `[url_prefix]/v1/display/text?text=<text>?size=S|M|L|XL&color=<hex color>&font=<font>&bordercolor=<hex color>&bordersize=<0|1>&cleanbg=<true|false>&animation=<ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>`
-  - Display some text with or without animation
+  Display some text with or without animation
   - **text**: The text to be displayed (the text can be split into multiple lines using | as a separator)
   - **size**: The size of the text (Extra Small (XS), Small (S), Medium (M), Large (L) or Extra Large (XL))
   - **color**: The color of the text in hexadecimal format (for example: color=FFFFFF)
@@ -121,7 +127,7 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
   - **animation**: Text animation. Fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None
   - **duration**: time to present the text in the DMD (If an animation is selected, the screen will remain black once the animation ends if the time is longer than the animation itself. If the time is -1, it will be permanent)
 - `[url_prefix]/v1/display/advanced?path=<image or video path>&text=<text>?size=S|M|L|XL&color=<hex color>&font=<font>&bordercolor=<hex color>&bordersize=<0|1>&cleanbg=<true|false>&animation=<ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>`
-  - Advanced display with animations. Text with or without background picture/video/animated gif or picture/video/animated gif can be used
+  Advanced display with animations. Text with or without background picture/video/animated gif or picture/video/animated gif can be used
   - **text**: The text to be displayed (the text can be split into multiple lines using | as a separator) 
   - **path**: The file path of the image or video to be displayed
   - **size**: The size of the text (Extra Small (XS), Small (S), Medium (M), Large (L) or Extra Large (XL))
@@ -174,7 +180,8 @@ DOFLinx will generate the following commands automatically:
 - When starting a game:
   - `http://<host:port>/v1/display/picture?path=mame/<rom-name>&duration=<duration>&animation=<animation>` - to display a PNG for the marquee
 - When playing a game:
-  - `http://<host:port>/v1/display/score?players=<number of players>&activeplayer=<active player>&score=<score>&cleanbg=<true|false>&credits=<credits>` - to display score of the given player
+  - `http://<host:port>/v1/display/score?player=<active player>&score=<score>&cleanbg=<true|false>` - to display score of the given player
+  - `http://<host:port>/v1/display/scorev2?players=<number of players>&activeplayer=<active player>&score=<score>&cleanbg=<true|false>&credits=<credits>` - to display score of the given player inidicating the score board layout based on the number of players
 - When closing DOFLinx:
   - `http://<host:port>/v1/display/score?player=1&score=0` - reset score to 0
   - `http://<host:port>/v1/blank` - to clear the DMD (goes to black)
@@ -197,7 +204,7 @@ Examples :
 
 - Display the ingame bonus animation `artwork/ingame/bonus.gif` : `FF_DMD,U,display/picture?path=ingame/bonus&duration=0&animation=none`
 - Display a static picture `artwork/mame/pacman.png` : `FF_DMD,U,display/picture?path=mame/pacman&duration=-1`
-- Display an animated Gif if it exists or falls back to png : `artwork/mame/pacman.gif` : `FF_DMD,U,display/picture?path=mame/pacman`
+- Display an animated Gif if it exists or falls back to png : `artwork/mame/pacman.gif` : `FF_DMD,U,display/picture?path=mame/pacman&duration=-1`
 
 Check the `.MAME` files included in DOFLinx, which already contain `FF_DMD` commands.
 
@@ -207,8 +214,8 @@ Once DOF2DMD is started, you can use your browser to test it:
 
 - Show version [http://127.0.0.1:8080/v1/version](http://127.0.0.1:8080/v1/version) 
 - Display picture in the artwork folder, subfolder `mame`, picture `galaga`: [http://127.0.0.1:8080/v1/display/picture?path=mame/galaga&duration=-1&animation=fade](http://127.0.0.1:8080/v1/display/picture?path=mame/galaga&duration=-1&animation=fade) 
-- Set score of player 1 (default) to 1000 using 1 player layout and cleaning the current scene: [http://127.0.0.1:8080/v1/display/score?score=1000](http://127.0.0.1:8080/v1/display/score?score=1000)
-- Set score of player 2 to 3998, credits to 5 using 4 player layout over the current scene: [http://127.0.0.1:8080/v1/display/score?players=4&activeplayer=2&score=3998&cleanbg=false&credits=5](http://127.0.0.1:8080/v1/display/score?players=4&activeplayer=2&score=3998&cleanbg=false&credits=5)
+- Set score of player 1 (default) to 1000 using default 4 player layout and cleaning the current scene: [http://127.0.0.1:8080/v1/display/score?score=1000](http://127.0.0.1:8080/v1/display/score?score=1000)
+- Set score of player 2 to 3998, credits to 5 using 2 player layout over the current scene: [http://127.0.0.1:8080/v1/display/scorev2?players=2&activeplayer=2&score=3998&cleanbg=false&credits=5](http://127.0.0.1:8080/v1/display/scorev2?players=4&activeplayer=2&score=3998&cleanbg=false&credits=5)
 - Set active player to player 2 and set score to 2000 using 2 players layout cleaning the current scene: [http://127.0.0.1:8080/v1/display/score?players=2&activeplayer=2&score=2000](http://127.0.0.1:8080/v1/display/score?players=2&activeplayer=2&score=2000)
 - Show text using M size with Back To the Future Font, orange font color, red border font color and scroll right animation during 10 seconds: [http://127.0.0.1:8080/v1/display/text?text=HELLO|friends&font=BTTF&size=M&color=FFA500&bordersize=1&bordercolor=FF0000&cleanbg=true&animation=scrollright&duration=10] (http://127.0.0.1:8080/v1/display/text?text=HELLO|friends&font=BTTF&size=M&color=FFA500&bordersize=1&bordercolor=FF0000&cleanbg=true&animation=scrollright&duration=10)
 - Show text with a background image using White Rabbit font in white and blue border using a fade animation in and a scroll right as animation out and waiting 10 seconds betwwen animations [http://127.0.0.1:8080/v1/display/advanced?path=mame/DOFLinx&text=Hello%20Friends!!&font=WhiteRabbit&size=M&color=0000ff&bordersize=1&bordercolor=ffffFF&cleanbg=true&animationin=FadeIn&animationout=ScrollOffRight&duration=10](http://127.0.0.1:8080/v1/display/advanced?path=mame/DOFLinx&text=Hello%20Friends!!&font=WhiteRabbit&size=M&color=0000ff&bordersize=1&bordercolor=ffffFF&cleanbg=true&animationin=FadeIn&animationout=ScrollOffRight&duration=10)
