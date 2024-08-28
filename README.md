@@ -90,33 +90,33 @@ There are example aseprite files in [the `ingame.src` folder](/DOF2DMD/artwork/i
 DOF2DMD is a server listening to simple http request. Once it has started, you can use the following :
 
 - `[url_prefix]/v1/display/picture?path=<image or video path>&animation=<fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=s<econds>`
-  Display an image, gif animation or video.
+  - Display an image, gif animation or video.
   - **path**: The file path of the image or video to be displayed
   - **duration**: If the duration is 0 in an animation/video, it will be limited to the duration of the video or animation. If the time is -1, it will be permanent
   - **animation**: The animation applied to the scene fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None
 - `[url_prefix]/v1/display/score?player=<active player>&score=<score>&cleanbg=<true|false>`
-  Display a score board of 4 players
+  - Display a score board of 4 players
   - **player**: the highlighted player
   - **score**: The score value to be displayed for active player
   - **cleanbg**: Clean the active screen (when not cleaned the score will showed over the current image/animation
 - `[url_prefix]/v1/display/scorev2?players=<number of players>&activeplayer=<active player>&score=<score>&cleanbg=<true|false>&credits=<credits>`
-  Display an advanced score board using a layout from 1 to 4 players and credits**
+  - Display an advanced score board using a layout from 1 to 4 players and credits
   - **players**: the number of players for score layout
   - **activeplayer**: the highlighted player
   - **score**: The score value to be displayed for active player
   - **cleanbg**: Clean the active screen (when not cleaned the score will showed over the current image/animation
   - **credits**: Credits inserted in the game
 - `[url_prefix]/v1/display/scorebackground?path=<image or video path>`
-  Add an image, gif animation or video as background on the Score board. 
+  - Add an image, gif animation or video as background on the Score board. 
   - **path**: The file path of the image or video to be displayed/added to de Score Board
 - `[url_prefix]/v1/blank`
-  This endpoint clears or blanks the display
+  - This endpoint clears or blanks the display
 - `[url_prefix]/v1/exit`
-  This endpoint exits or closes the application
+  - This endpoint exits or closes the application
 - `[url_prefix]/v1/version`
-  This endpoint returns the version information of the application
+  - This endpoint returns the version information of the application
 - `[url_prefix]/v1/display/text?text=<text>?size=S|M|L|XL&color=<hex color>&font=<font>&bordercolor=<hex color>&bordersize=<0|1>&cleanbg=<true|false>&animation=<ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>`
-  Display some text with or without animation
+  - Display some text with or without animation
   - **text**: The text to be displayed (the text can be split into multiple lines using | as a separator)
   - **size**: The size of the text (Extra Small (XS), Small (S), Medium (M), Large (L) or Extra Large (XL))
   - **color**: The color of the text in hexadecimal format (for example: color=FFFFFF)
@@ -127,7 +127,7 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
   - **animation**: Text animation. Fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None
   - **duration**: time to present the text in the DMD (If an animation is selected, the screen will remain black once the animation ends if the time is longer than the animation itself. If the time is -1, it will be permanent)
 - `[url_prefix]/v1/display/advanced?path=<image or video path>&text=<text>?size=S|M|L|XL&color=<hex color>&font=<font>&bordercolor=<hex color>&bordersize=<0|1>&cleanbg=<true|false>&animation=<ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>`
-  Advanced display with animations. Text with or without background picture/video/animated gif or picture/video/animated gif can be used
+  - Advanced display with animations. Text with or without background picture/video/animated gif or picture/video/animated gif can be used
   - **text**: The text to be displayed (the text can be split into multiple lines using | as a separator) 
   - **path**: The file path of the image or video to be displayed
   - **size**: The size of the text (Extra Small (XS), Small (S), Medium (M), Large (L) or Extra Large (XL))
