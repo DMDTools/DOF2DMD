@@ -413,7 +413,7 @@ namespace DOF2DMD
                 }
                 else
                 {
-                    localFontPath = $"resources/WhiteRabbit_{size}.fnt";
+                    localFontPath = $"resources/Consoles_{size}.fnt";
                     LogIt($"Font not found, using default: {localFontPath}");
                 }
 
@@ -525,7 +525,7 @@ namespace DOF2DMD
                 }
                 else
                 {
-                    localFontPath = $"resources/WhiteRabbit_{size}.fnt";
+                    localFontPath = $"resources/Consoles_{size}.fnt";
                     LogIt($"Font not found, using default: {localFontPath}");
                 }
 
@@ -780,7 +780,7 @@ namespace DOF2DMD
                                 string text = query.Get("text") ?? "";
                                 string size = query.Get("size") ?? "M";
                                 string color = query.Get("color") ?? "FFFFFF";
-                                string font = query.Get("font") ?? "WhiteRabbit_16";
+                                string font = query.Get("font") ?? "Consoles";
                                 string bordercolor = query.Get("bordercolor") ?? "000000";
                                 string bordersize = query.Get("bordersize") ?? "0";
                                 string animation = query.Get("animation") ?? "none";
@@ -805,10 +805,10 @@ namespace DOF2DMD
                                 string advtext = query.Get("text") ?? "";
                                 string advpath = query.Get("path") ?? "";
                                 string advsize = query.Get("size") ?? "M";
-                                string advcolor = query.Get("color") ?? "white";
-                                string advfont = query.Get("font") ?? "bm_army-12";
-                                string advbordercolor = query.Get("bordercolor") ?? "red";
-                                string advbordersize = query.Get("bordersize") ?? "1";
+                                string advcolor = query.Get("color") ?? "FFFFFF";
+                                string advfont = query.Get("font") ?? "Consoles";
+                                string advbordercolor = query.Get("bordercolor") ?? "0000FF";
+                                string advbordersize = query.Get("bordersize") ?? "0";
                                 string animationIn = query.Get("animationin") ?? "none";
                                 string animationOut = query.Get("animationout") ?? "none";
                                 float advtextduration = float.TryParse(query.Get("duration"), out float aresult) ? aresult : 5.0f;
