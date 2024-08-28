@@ -100,7 +100,7 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
   - **score**: The score value to be displayed for active player
   - **cleanbg**: Clean the active screen (when not cleaned the score will showed over the current image/animation
   - **credits**: Credits inserted in the game
-- `[url_prefix]/v1/display/scorebackground?path=<image or video path>
+- `[url_prefix]/v1/display/scorebackground?path=<image or video path>`
   - Add an image, gif animation or video as background on the Score board. 
   - **path**: The file path of the image or video to be displayed/added to de Score Board
 - `[url_prefix]/v1/blank`
@@ -226,7 +226,10 @@ Here is what I plan to implement :
 - A plugin for [Launch box / big box](http://pluginapi.launchbox-app.com/) which
   interfaces with DOF2DMD to show systems and game marquees when browsing
   games (partially implemented)
-- Better score display
+- A plugin for [Attract-Mode](https://attractmode.org/) which
+  interfaces with DOF2DMD to show systems and game marquees when browsing
+  games
+
 
 ## 💬 Questions and support
 
