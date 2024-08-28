@@ -59,13 +59,13 @@ namespace DOF2DMD
         public static int[] gScore = [0, 0, 0, 0, 0];
         public static int gActivePlayer = 1;
         public static int gNbPlayers = 1;
+        public static int gCredits = 1;
         public static bool gScoreQueued = false;
         public static string gGameMarquee = "DOF2DMD";
         private static Timer _scoreTimer;
         private static Timer _animationTimer;
         private static readonly object _scoreQueueLock = new object();
         private static readonly object _animationQueueLock = new object();
-        //private static Group DMDScene;
         private static readonly object sceneLock = new object();
         private static Sequence _queue;
 
@@ -162,7 +162,7 @@ namespace DOF2DMD
                         {
                             LogIt("  ⏱️ AnimationTimer: score queued, display it");
                             if (gScore[gActivePlayer] > 0)
-                                DisplayScoreboard(gNbPlayers, gActivePlayer, gScore[1], gScore[2], gScore[3], gScore[4], $"Player {gActivePlayer}", "Gus", true);
+                                DisplayScoreboard(gNbPlayers, gActivePlayer, gScore[1], gScore[2], gScore[3], gScore[4], $"Player {gActivePlayer}", $"Credits {gCredits}", true);
                             gScoreQueued = false;
                         }
                     }
@@ -243,14 +243,15 @@ namespace DOF2DMD
                 Trace.WriteLine(message);
             }
         }
-        public static Boolean DisplayScore(int cPlayers, int player, int score, bool sCleanbg)
+        public static Boolean DisplayScore(int cPlayers, int player, int score, bool sCleanbg, int credits)
         {
             gScore[player] = score;
             gActivePlayer = player;
             gNbPlayers = cPlayers;
+            gCredits = credits;
             LogIt($"DisplayScore for player {player}: {score}");
             gScoreQueued = true;
-            DisplayScoreboard(gNbPlayers, player, gScore[1], gScore[2], gScore[3], gScore[4], $"PLAYER {gActivePlayer}", "Test", sCleanbg);
+            DisplayScoreboard(gNbPlayers, player, gScore[1], gScore[2], gScore[3], gScore[4], $"PLAYER {gActivePlayer}", $"Credits {gCredits}", sCleanbg);
 
             if (AppSettings.ScoreDmd != 0)
             {
@@ -489,7 +490,7 @@ namespace DOF2DMD
 
 
         /// <summary>
-        /// Displays text on the DMD device.
+        /// Displays text or image with image or with text on the DMD device.
         /// %0A o | para salto de linea
         /// </summary>
         public static bool AdvancedDisplay(string text, string path, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animationIn, string animationOut, float duration)
@@ -572,7 +573,58 @@ namespace DOF2DMD
                 return false;
             }
         }
+        /// <summary>
+        /// Displays text or image with image or with text on the DMD device.
+        /// %0A o | para salto de linea
+        /// </summary>
+        public static bool DisplayScoreBackground(string path)
+        {
+            try
+            {
+                
+                var bgActor = new Actor();
 
+                if (!string.IsNullOrEmpty(path))
+                {
+                    path = AppSettings.artworkPath + "/" + path;
+                    string localPath = HttpUtility.UrlDecode(path);
+
+                    List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
+
+                    if (FileExistsWithExtensions(localPath, extensions, out string foundExtension))
+                    {
+                        string fullPath = localPath + foundExtension;
+
+                        List<string> videoExtensions = new List<string> { ".gif", ".avi", ".mp4" };
+                        List<string> imageExtensions = new List<string> { ".png", ".jpg", ".bmp" };
+
+                        if (videoExtensions.Contains(foundExtension.ToLower()))
+                        {
+                            bgActor = (AnimatedActor)gDmdDevice.NewVideo("MyVideo", fullPath);
+                            bgActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
+                        }
+                        else if (imageExtensions.Contains(foundExtension.ToLower()))
+                        {
+                            bgActor = (Actor)gDmdDevice.NewImage("MyImage", fullPath);
+                            bgActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
+                        }
+                    }
+                }
+
+                
+                gDmdDevice.Post(() =>
+                {
+                    _scoreBoard.SetBackground(bgActor);
+                });
+                
+                LogIt($"Rendering Score Background: {path}");
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
         /// <summary>
         /// Handle incoming HTTP requests
         /// </summary>
@@ -698,12 +750,12 @@ namespace DOF2DMD
                             case "text":
                                 string text = query.Get("text") ?? "";
                                 string size = query.Get("size") ?? "M";
-                                string color = query.Get("color") ?? "white";
-                                string font = query.Get("font") ?? "bm_army-12";
-                                string bordercolor = query.Get("bordercolor") ?? "red";
-                                string bordersize = query.Get("bordersize") ?? "1";
+                                string color = query.Get("color") ?? "FFFFFF";
+                                string font = query.Get("font") ?? "WhiteRabbit_16";
+                                string bordercolor = query.Get("bordercolor") ?? "000000";
+                                string bordersize = query.Get("bordersize") ?? "0";
                                 string animation = query.Get("animation") ?? "none";
-                                float textduration = float.Parse(query.Get("duration"));
+                                float textduration = float.TryParse(query.Get("duration"), out float tresult) ? tresult : 5.0f;
                                 LogIt($"Text is now set to: {text} with size {size} ,color {color} ,font {font} ,border color {bordercolor}, border size {bordersize}, animation {animation} with a duration of {textduration} seconds");
                                 bool cleanbg;
                                 if (!bool.TryParse(query.Get("cleanbg"), out cleanbg))
@@ -730,7 +782,7 @@ namespace DOF2DMD
                                 string advbordersize = query.Get("bordersize") ?? "1";
                                 string animationIn = query.Get("animationin") ?? "none";
                                 string animationOut = query.Get("animationout") ?? "none";
-                                float advtextduration = float.Parse(query.Get("duration"));
+                                float advtextduration = float.TryParse(query.Get("duration"), out float aresult) ? aresult : 5.0f;
                                 LogIt($"Advanced Text is now set to: {advtext} with size {advsize} ,color {advcolor} ,font {advfont} ,border color {advbordercolor}, border size {advbordersize}, animation In {animationIn}, animation Out {animationOut} with a duration of {advtextduration} seconds");
                                 bool advcleanbg;
                                 if (!bool.TryParse(query.Get("cleanbg"), out advcleanbg))
@@ -748,17 +800,18 @@ namespace DOF2DMD
                                 }
                                 break;
                             case "score":
-                                // [url_prefix]/v1/display/score?players=<number of players>&activeplayer=<active player>&score=<score>
-                                gActivePlayer = int.Parse(query.Get("activeplayer"));
+                                // [url_prefix]/v1/display/score?players=<number of players>&activeplayer=<active player>&score=<score>&credits=<credits>
+                                gActivePlayer = int.TryParse(query.Get("activeplayer"), out int parsedAPlayer) ? parsedAPlayer : gActivePlayer;
                                 gScore[gActivePlayer] = int.Parse(query.Get("score"));
-                                gNbPlayers = int.Parse(query.Get("players"));
+                                gNbPlayers = int.TryParse(query.Get("players"), out int parsedPlayers) ? parsedPlayers : gNbPlayers;
+                                gCredits = int.TryParse(query.Get("credits"), out int parsedCredits) ? parsedCredits : gCredits;
                                 bool sCleanbg;
                                 if (!bool.TryParse(query.Get("cleanbg"), out sCleanbg))
                                 {
                                     sCleanbg = true; // valor predeterminado si la conversión falla
                                 }
 
-                                if (DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], sCleanbg))
+                                if (DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], sCleanbg, gCredits))
                                 {
                                     sReturn = "Ok";
                                 }
@@ -767,6 +820,18 @@ namespace DOF2DMD
                                     sReturn = "Error when displaying score board";
                                 }
 
+                                break;
+                            case "scorebackground":
+                                //[url_prefix]/v1/display/scorebackground?path=<path>
+                                string scorebgpath = query.Get("path") ?? "";
+                                if (DisplayScoreBackground(scorebgpath))
+                                {
+                                    sReturn = "Ok";
+                                }
+                                else
+                                {
+                                    sReturn = "Error when displaying score board background";
+                                }
                                 break;
                             default:
                                 sReturn = "Not implemented";
@@ -825,7 +890,6 @@ namespace DOF2DMD
         public NoAnimationScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
             _container = new Group(FlexDMD);
-            // There is nothing obvious in UltraDMD that gives hint on the timing, so I choosed one.
 
             AddActor(_container);
             var y = 0f;
@@ -859,7 +923,6 @@ namespace DOF2DMD
             sequenceAction.Add(action2);
 
             _container.AddAction(sequenceAction);
-            //_tweener.Tween(_container, new { Y = -_container.Height }, _length, 0f);
 
         }
 
@@ -884,8 +947,7 @@ namespace DOF2DMD
         public AdvancedScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
             _container = new Group(FlexDMD);
-            // There is nothing obvious in UltraDMD that gives hint on the timing, so I choosed one.
-
+            
             AddActor(_container);
             var y = 0f;
             string[] lines = text.Split(new char[] { '\n', '|' });
@@ -894,7 +956,6 @@ namespace DOF2DMD
 
             foreach (string line in lines)
             {
-                //var txt = line.Trim();
                 var txt = line;
                 if (txt.Length == 0) txt = " ";
                 var label = new FlexDMD.Label(flex, font, txt);
@@ -931,17 +992,16 @@ namespace DOF2DMD
         public ScrollingUpScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
             _container = new Group(FlexDMD);
-            // There is nothing obvious in UltraDMD that gives hint on the timing, so I choosed one.
 
             AddActor(_container);
             var y = 0f;
             string[] lines = text.Split(new char[] { '\n', '|' });
 
-            _length = 3f + lines.Length * 0.2f;
+            _length = pauseS;
+            //_length = 3f + lines.Length * 0.2f;
 
             foreach (string line in lines)
             {
-                //var txt = line.Trim();
                 var txt = line;
                 if (txt.Length == 0) txt = " ";
                 var label = new FlexDMD.Label(flex, font, txt);
@@ -980,17 +1040,16 @@ namespace DOF2DMD
         public ScrollingDownScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
             _container = new Group(FlexDMD);
-            // There is nothing obvious in UltraDMD that gives hint on the timing, so I choosed one.
 
             AddActor(_container);
             var y = 0f;
             string[] lines = text.Split(new char[] { '\n', '|' });
 
-            _length = 3f + lines.Length * 0.2f;
+            _length = pauseS;
+            //_length = 3f + lines.Length * 0.2f;
 
             foreach (string line in lines)
             {
-                //var txt = line.Trim();
                 var txt = line;
                 if (txt.Length == 0) txt = " ";
                 var label = new FlexDMD.Label(flex, font, txt);
@@ -1029,17 +1088,16 @@ namespace DOF2DMD
         public ScrollingLeftScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn , float pauseS, AnimationType animateOut , string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
             _container = new Group(FlexDMD);
-            // There is nothing obvious in UltraDMD that gives hint on the timing, so I choosed one.
             
             AddActor(_container);
             var y = 0f;
             string[] lines = text.Split(new char[] { '\n', '|' });
 
-            _length = 3f + lines.Length * 0.2f;
+            _length = pauseS;
+            //_length = 3f + lines.Length * 0.2f;
 
             foreach (string line in lines)
             {
-                //var txt = line.Trim();
                 var txt = line;
                 if (txt.Length == 0) txt = " ";
                 var label = new FlexDMD.Label(flex, font, txt);
@@ -1080,17 +1138,18 @@ namespace DOF2DMD
         public ScrollingRightScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
             _container = new Group(FlexDMD);
-            // There is nothing obvious in UltraDMD that gives hint on the timing, so I choosed one.
-            _length = 3f + text.Length * 0.2f;
+
+            
+            
             AddActor(_container);
             var y = 0f;
             string[] lines = text.Split(new char[] { '\n', '|' });
 
-            _length = 3f + lines.Length * 0.2f;
+            _length = pauseS;
+            //_length = 3f + lines.Length * 0.2f;
 
             foreach (string line in lines)
             {
-                //var txt = line.Trim();
                 var txt = line;
                 if (txt.Length == 0) txt = " ";
                 var label = new FlexDMD.Label(flex, font, txt);
@@ -1213,10 +1272,8 @@ namespace DOF2DMD
             base.Update(delta);
             SetBounds(0, 0, Parent.Width, Parent.Height);
             float yText = Height - TextFont.BitmapFont.BaseHeight - 1;
-            // float yLine2 = 1 + HighlightFont.BitmapFont.BaseHeight + (Height - 2 - TextFont.BitmapFont.BaseHeight - 2 * HighlightFont.BitmapFont.BaseHeight) / 2;
             float yLine2 = (Height - TextFont.BitmapFont.BaseHeight) / 2f;
             float dec = (HighlightFont.BitmapFont.BaseHeight - ScoreFont.BitmapFont.BaseHeight) / 2f;
-            // float yLine2 = (1 + yText) * 0.5f;
             _scores[0].Pack();
             _scores[1].Pack();
             _scores[2].Pack();
@@ -1274,7 +1331,6 @@ namespace DOF2DMD
         {
             if (Visible)
             {
-                //graphics.Clear(Color.Black);
                 _background?.SetSize(Width, Height);
                 base.Draw(graphics);
             }
