@@ -403,14 +403,29 @@ namespace DOF2DMD
                 // Convert size to numeric value based on device dimensions
                 size = GetFontSize(size, gDmdDevice.Width, gDmdDevice.Height);
 
+                //Check if the font exists
+                string localFontPath = $"resources/{font}_{size}";
+                List<string> extensions = new List<string> { ".fnt", ".png" };
+
+                if (FileExistsWithExtensions(localFontPath, extensions, out string foundExtension))
+                {
+                    localFontPath = localFontPath + ".fnt";
+                }
+                else
+                {
+                    localFontPath = $"resources/WhiteRabbit_{size}.fnt";
+                    LogIt($"Font not found, using default: {localFontPath}");
+                }
+
+                
                 // Determine if border is needed
                 int border = bordersize != "0" ? 1 : 0;
 
-                //gDmdDevice.LockRenderThread();
+                
                 gDmdDevice.Post(() =>
                 {
                     // Create font and label actor
-                    FlexDMD.Font myFont = gDmdDevice.NewFont($"resources/{font}_{size}.fnt", HexToColor(color), HexToColor(bordercolor), border);
+                    FlexDMD.Font myFont = gDmdDevice.NewFont(localFontPath, HexToColor(color), HexToColor(bordercolor), border);
                     var labelActor = (Actor)gDmdDevice.NewLabel("MyLabel", myFont, text);
 
                     var currentActor = new Actor();
@@ -500,6 +515,20 @@ namespace DOF2DMD
                 // Convert size to numeric value based on device dimensions
                 size = GetFontSize(size, gDmdDevice.Width, gDmdDevice.Height);
 
+                //Check if the font exists
+                string localFontPath = $"resources/{font}_{size}";
+                List<string> fontextensions = new List<string> { ".fnt", ".png" };
+
+                if (FileExistsWithExtensions(localFontPath, fontextensions, out string foundPathExtension))
+                {
+                    localFontPath = localFontPath + ".fnt";
+                }
+                else
+                {
+                    localFontPath = $"resources/WhiteRabbit_{size}.fnt";
+                    LogIt($"Font not found, using default: {localFontPath}");
+                }
+
                 // Determine if border is needed
                 int border = bordersize != "0" ? 1 : 0;
 
@@ -536,7 +565,7 @@ namespace DOF2DMD
                 gDmdDevice.Post(() =>
                 {
                     // Create font and label actor
-                    FlexDMD.Font myFont = gDmdDevice.NewFont($"resources/{font}_{size}.fnt", HexToColor(color), HexToColor(bordercolor), border);
+                    FlexDMD.Font myFont = gDmdDevice.NewFont(localFontPath, HexToColor(color), HexToColor(bordercolor), border);
                     var labelActor = (Actor)gDmdDevice.NewLabel("MyLabel", myFont, text);
 
                     if (cleanbg)
@@ -800,11 +829,10 @@ namespace DOF2DMD
                                 }
                                 break;
                             case "score":
-                                // [url_prefix]/v1/display/score?players=<number of players>&activeplayer=<active player>&score=<score>&credits=<credits>
-                                gActivePlayer = int.TryParse(query.Get("activeplayer"), out int parsedAPlayer) ? parsedAPlayer : gActivePlayer;
+                                // [url_prefix]/v1/display/score?player=<active player>&score=<score>&cleanbg=<true|false>
+                                gActivePlayer = int.TryParse(query.Get("player"), out int parsedAPlayer) ? parsedAPlayer : gActivePlayer;
                                 gScore[gActivePlayer] = int.Parse(query.Get("score"));
-                                gNbPlayers = int.TryParse(query.Get("players"), out int parsedPlayers) ? parsedPlayers : gNbPlayers;
-                                gCredits = int.TryParse(query.Get("credits"), out int parsedCredits) ? parsedCredits : gCredits;
+                                gNbPlayers = 4;
                                 bool sCleanbg;
                                 if (!bool.TryParse(query.Get("cleanbg"), out sCleanbg))
                                 {
@@ -812,6 +840,28 @@ namespace DOF2DMD
                                 }
 
                                 if (DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], sCleanbg, gCredits))
+                                {
+                                    sReturn = "Ok";
+                                }
+                                else
+                                {
+                                    sReturn = "Error when displaying score board";
+                                }
+
+                                break;
+                            case "scorev2":
+                                // [url_prefix]/v1/display/scorev2?players=<number of players>&activeplayer=<active player>&score=<score>&credits=<credits>&cleanbg=<true|false>
+                                gActivePlayer = int.TryParse(query.Get("activeplayer"), out int parsedAPlayerv2) ? parsedAPlayerv2 : gActivePlayer;
+                                gScore[gActivePlayer] = int.Parse(query.Get("score"));
+                                gNbPlayers = int.TryParse(query.Get("players"), out int parsedPlayers) ? parsedPlayers : gNbPlayers;
+                                gCredits = int.TryParse(query.Get("credits"), out int parsedCredits) ? parsedCredits : gCredits;
+                                bool sCleanbgv2;
+                                if (!bool.TryParse(query.Get("cleanbg"), out sCleanbgv2))
+                                {
+                                    sCleanbgv2 = true; // valor predeterminado si la conversión falla
+                                }
+
+                                if (DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], sCleanbgv2, gCredits))
                                 {
                                     sReturn = "Ok";
                                 }
