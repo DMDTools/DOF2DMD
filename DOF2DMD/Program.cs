@@ -305,8 +305,8 @@ namespace DOF2DMD
                 {
                     if (string.IsNullOrEmpty(path))
                         return false;
-
-                    path = AppSettings.artworkPath + "/" + path;
+                    if(!string.IsNullOrEmpty(AppSettings.artworkPath))
+                        path = AppSettings.artworkPath + "/" + path;
                     string localPath = HttpUtility.UrlDecode(path);
 
                     List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
@@ -336,7 +336,7 @@ namespace DOF2DMD
                             mediaActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
 
 
-                            if (duration != -1)
+                            if (duration > -1)
                             {
 
                                 if (isVideo && duration == 0)
@@ -433,10 +433,13 @@ namespace DOF2DMD
                     {
                         _queue.RemoveAllScenes();
                     }
-
+                    if (duration > -1)
+                            {
+                                _animationTimer?.Dispose();
+                                _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+                            }
                     // Create background scene based on animation type
-                    _animationTimer?.Dispose();
-                    _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000, Timeout.Infinite);
+                    
                     BackgroundScene bg = CreateTextBackgroundScene(animation.ToLower(), currentActor, text, myFont, duration);
 
                     _queue.Visible = true;
@@ -536,7 +539,9 @@ namespace DOF2DMD
 
                 if (!string.IsNullOrEmpty(path))
                 {
-                    path = AppSettings.artworkPath + "/" + path;
+                    
+                    if(!string.IsNullOrEmpty(AppSettings.artworkPath))
+                        path = AppSettings.artworkPath + "/" + path;
                     string localPath = HttpUtility.UrlDecode(path);
 
                     List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
@@ -965,14 +970,18 @@ namespace DOF2DMD
         {
             base.Begin();
             _container.Y = (Height - _container.Height) / 2;
+            
             var action1 = new FlexDMD.WaitAction(_length);
             var action2 = new FlexDMD.ShowAction(_container, false);
             var sequenceAction = new FlexDMD.SequenceAction();
-
-            sequenceAction.Add(action1);
-            sequenceAction.Add(action2);
-
+            if (_length > -1)
+            {
+                sequenceAction.Add(action1);
+                sequenceAction.Add(action2);
+                
             _container.AddAction(sequenceAction);
+            }
+            
 
         }
 
