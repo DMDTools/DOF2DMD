@@ -57,7 +57,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: DOF2DMD
-          path: DOF2DMD\DOF2DMD\bin\Release\net8.0-windows\win-x64\publish
+          path: .\DOF2DMD\bin\Release\net8.0-windows\win-x64\publish
           retention-days: 7
 
       - name: Generate zip bundle
