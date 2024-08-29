@@ -89,7 +89,7 @@ There are example aseprite files in [the `ingame.src` folder](/DOF2DMD/artwork/i
 
 DOF2DMD is a server listening to simple http request. Once it has started, you can use the following :
 
-- `[url_prefix]/v1/display/picture?path=<image or video path>&animation=<fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=s<econds>`
+- `[url_prefix]/v1/display/picture?path=<image or video path>&animation=<fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>`
   Display an image, gif animation or video.
   - **path**: The file path of the image or video to be displayed
   - **duration**: If the duration is 0 in an animation/video, it will be limited to the duration of the video or animation. If the time is -1, it will be permanent
@@ -115,7 +115,7 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
   This endpoint exits or closes the application
 - `[url_prefix]/v1/version`
   This endpoint returns the version information of the application
-- `[url_prefix]/v1/display/text?text=<text>?size=S|M|L|XL&color=<hex color>&font=<font>&bordercolor=<hex color>&bordersize=<0|1>&cleanbg=<true|false>&animation=<ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>`
+- `[url_prefix]/v1/display/text?text=<text>?size=XS|S|M|L|XL&color=<hex color>&font=<font>&bordercolor=<hex color>&bordersize=<0|1>&cleanbg=<true|false>&animation=<ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>`
   Display some text with or without animation
   - **text**: The text to be displayed (the text can be split into multiple lines using | as a separator)
   - **size**: The size of the text (Extra Small (XS), Small (S), Medium (M), Large (L) or Extra Large (XL))
@@ -126,7 +126,7 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
   - **cleanbg**: Clean the active screen (when not cleaned the text will showed over the current image/animation
   - **animation**: Text animation. ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None
   - **duration**: time to present the text in the DMD (If an animation is selected, the screen will remain black once the animation ends if the time is longer than the animation itself. If the time is -1 in none text animation, it will be permanent, using -1 in another animation presents a black screen)
-- `[url_prefix]/v1/display/advanced?path=<image or video path>&text=<text>?size=S|M|L|XL&color=<hex color>&font=<font>&bordercolor=<hex color>&bordersize=<0|1>&cleanbg=<true|false>&animationin=<FadeIn|FadeOut|ScrollOffRight|ScrollOffLeft|ScrollOnLeft|ScrollOnRight|ScrollOffUp|ScrollOffDown|ScrollOnUp|ScrollOnDown|FillFadeIn|FillFadeOut|None>&animationout=<FadeIn|FadeOut|ScrollOffRight|ScrollOffLeft|ScrollOnLeft|ScrollOnRight|ScrollOffUp|ScrollOffDown|ScrollOnUp|ScrollOnDown|FillFadeIn|FillFadeOut|None>&duration=<seconds>`
+- `[url_prefix]/v1/display/advanced?path=<image or video path>&text=<text>?size=XS|S|M|L|XL&color=<hex color>&font=<font>&bordercolor=<hex color>&bordersize=<0|1>&cleanbg=<true|false>&animationin=<FadeIn|FadeOut|ScrollOffRight|ScrollOffLeft|ScrollOnLeft|ScrollOnRight|ScrollOffUp|ScrollOffDown|ScrollOnUp|ScrollOnDown|FillFadeIn|FillFadeOut|None>&animationout=<FadeIn|FadeOut|ScrollOffRight|ScrollOffLeft|ScrollOnLeft|ScrollOnRight|ScrollOffUp|ScrollOffDown|ScrollOnUp|ScrollOnDown|FillFadeIn|FillFadeOut|None>&duration=<seconds>`
   Advanced display with animations. Text with or without background picture/video/animated gif or picture/video/animated gif can be used
   - **text**: The text to be displayed (the text can be split into multiple lines using | as a separator) 
   - **path**: The file path of the image or video to be displayed
