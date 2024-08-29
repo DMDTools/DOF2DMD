@@ -295,9 +295,8 @@ namespace DOF2DMD
             }
         }
         /// <summary>
-        /// Displays an image file on the DMD device using native FlexDMD capabilities.
+        /// Displays an image or video file on the DMD device using native FlexDMD capabilities.
         /// </summary>
-
         public static bool DisplayPicture(string path, float duration, string animation)
         {
             
@@ -394,7 +393,7 @@ namespace DOF2DMD
 
         /// <summary>
         /// Displays text on the DMD device.
-        /// %0A o | para salto de linea
+        /// %0A or | for line break
         /// </summary>
         public static bool DisplayText(string text, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animation, float duration)
         {
@@ -454,7 +453,6 @@ namespace DOF2DMD
                         gDmdDevice.Stage.AddActor(bg);
                     }
                 });
-                //gDmdDevice.UnlockRenderThread();
 
                 LogIt($"Rendering text: {text}");
                 return true;
@@ -464,7 +462,9 @@ namespace DOF2DMD
                 return false;
             }
         }
-
+        /// <summary>
+        /// Returns de correct pixel size for the font depending on the DMD size (256x64 or 128x32) and the letter based size.
+        /// </summary>
         private static string GetFontSize(string size, int width, int height)
         {
             var sizeMapping = new Dictionary<(int, int), Dictionary<string, string>>
@@ -509,7 +509,7 @@ namespace DOF2DMD
 
         /// <summary>
         /// Displays text or image with image or with text on the DMD device.
-        /// %0A o | para salto de linea
+        /// %0A or | for line break
         /// </summary>
         public static bool AdvancedDisplay(string text, string path, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animationIn, string animationOut, float duration)
         {
@@ -566,7 +566,6 @@ namespace DOF2DMD
                     }
                 }
 
-                //gDmdDevice.LockRenderThread();
                 gDmdDevice.Post(() =>
                 {
                     // Create font and label actor
@@ -580,9 +579,9 @@ namespace DOF2DMD
 
                     // Create advanced scene
                     var bg = new AdvancedScene(gDmdDevice, bgActor, text, myFont,
-                                               (AnimationType)Enum.Parse(typeof(AnimationType), animationIn),
+                                               (AnimationType)Enum.Parse(typeof(AnimationType), FormatAnimationInput(animationIn)),
                                                duration,
-                                               (AnimationType)Enum.Parse(typeof(AnimationType), animationOut),
+                                               (AnimationType)Enum.Parse(typeof(AnimationType), FormatAnimationInput(animationOut)),
                                                "");
 
                     _queue.Visible = true;
@@ -597,7 +596,6 @@ namespace DOF2DMD
                         gDmdDevice.Stage.AddActor(bg);
                     }
                 });
-                //gDmdDevice.UnlockRenderThread();
 
                 LogIt($"Rendering text: {text}");
                 return true;
@@ -706,7 +704,9 @@ namespace DOF2DMD
 
             return _color;
         }
-        // Función que comprueba si existe un archivo con alguna de las extensiones
+        /// <summary>
+        /// Check if a file with extension exists
+        /// </summary>
         public static bool FileExistsWithExtensions(string fileNameWithoutExtension, List<string> extensions, out string foundExtension)
         {
             foreach (var extension in extensions)
@@ -721,6 +721,31 @@ namespace DOF2DMD
             foundExtension = null;
             return false;
         }
+        /// <summary>
+        /// Parses the animation names to correct values
+        /// </summary>
+        public static string FormatAnimationInput(string input)
+        {
+            var validValues = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "scrollonup", "ScrollOnUp" },
+                { "scrolloffup", "ScrollOffUp" },
+                { "scrollonright", "ScrollOnRight" },
+                { "scrolloffright", "ScrollOffRight" },
+                { "scrolloffleft", "ScrollOffLeft" },
+                { "scrollonleft", "ScrollOnLeft" },
+                { "fadein", "FadeIn" },
+                { "fadeout", "FadeOut" },
+                { "scrolloffdown", "ScrollOffDown" },
+                { "scrollondown", "ScrollOnDown" },
+                { "fillfadein", "FillFadeIn" },
+                { "fillfadeout", "FillFadeOut" },
+                { "none", "None" }
+            };
+
+            return validValues.TryGetValue(input, out var formattedInput) ? formattedInput : null;
+        }
+
 
         /// <summary>
         /// Process incoming requests
