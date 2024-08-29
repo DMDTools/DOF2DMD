@@ -82,5 +82,6 @@ jobs:
           token: "${{ secrets.GITHUB_TOKEN }}"
           generateReleaseNotes: true
           prerelease: false
+          allowUpdates: true
           artifacts: |
             DOF2DMD.zip
