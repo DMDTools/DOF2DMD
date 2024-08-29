@@ -9,11 +9,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="../DmdDevice.ini">
+    <None Include="DmdDevice.ini">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </None>
-    <Content Include="../DmdDevice64.dll">
+    <Content Include="DmdDevice64.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>
@@ -27,7 +27,7 @@
 
   <ItemGroup>
     <Reference Include="FlexDMD">
-      <HintPath>../FlexDMD.dll</HintPath>
+      <HintPath>FlexDMD.dll</HintPath>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Reference>
   </ItemGroup>
