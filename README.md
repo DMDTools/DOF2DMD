@@ -247,7 +247,7 @@ I will be there too.
 
 Thanks to
 
-- Ojacques for create the first version of this project
+- [@ojacques](https://github.com/ojacques) for creating the first version of this project
 - DDH69 for DOFLinx, MAME for DOFLinx, and his support in this project. Think of
   [💲donating to DDH69](https://www.paypal.com/donate?hosted_button_id=YEPCTUYFX5KDE) to support his work.
 - [Pixelcade](https://pixelcade.org/) team who inspired me in implementing
