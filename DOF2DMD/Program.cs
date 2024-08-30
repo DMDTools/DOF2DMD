@@ -764,11 +764,16 @@ namespace DOF2DMD
                 {
                     case "blank":
                         gGameMarquee = "";
+
+
                         gDmdDevice.Post(() =>
                         {
                             LogIt("Cancel Rendering");
                             _queue.RemoveAllScenes();
                             gDmdDevice.Graphics.Clear(Color.Black);
+                            gDmdDevice.Stage.RemoveAll();
+                            gDmdDevice.Stage.AddActor(_queue);
+                            gDmdDevice.Stage.AddActor(_scoreBoard);
                             _scoreBoard.Visible = false;
                             if (_queue.IsFinished()) _queue.Visible = false;
                         });
