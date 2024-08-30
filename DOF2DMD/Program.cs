@@ -671,7 +671,7 @@ namespace DOF2DMD
 
                 string dof2dmdUrl = req.Url.ToString();
                 string sResponse = "OK";
-                if (dof2dmdUrl.Contains("v1/"))
+                if (dof2dmdUrl.Contains("v1/") || dof2dmdUrl.Contains("v2/"))
                 {
                     LogIt($"Received request for {req.Url}");
                     //sResponse = ProcessRequest(dof2dmdUrl);
@@ -758,179 +758,226 @@ namespace DOF2DMD
 
             string[] urlParts = newUrl.AbsolutePath.Split('/');
 
-            if (urlParts[1] == "v1")
+            switch (urlParts[1])
             {
-                switch (urlParts[2])
-                {
-                    case "blank":
-                        gGameMarquee = "";
+                case "v1":
+                    switch (urlParts[2])
+                    {
+                        case "blank":
+                            gGameMarquee = "";
 
 
-                        gDmdDevice.Post(() =>
-                        {
-                            LogIt("Cancel Rendering");
-                            _queue.RemoveAllScenes();
-                            gDmdDevice.Graphics.Clear(Color.Black);
-                            gDmdDevice.Stage.RemoveAll();
-                            gDmdDevice.Stage.AddActor(_queue);
-                            gDmdDevice.Stage.AddActor(_scoreBoard);
-                            _scoreBoard.Visible = false;
-                            if (_queue.IsFinished()) _queue.Visible = false;
-                        });
-                        break;
-                    case "exit":
-                        Environment.Exit(0);
-                        break;
-                    case "version":
-                        sReturn = "1.0";
-                        break;
-                    case "display":
-                        switch (urlParts[3])
-                        {
-                            case "picture":
-                                string picturepath = query.Get("path");
-                                float pictureduration = float.TryParse(query.Get("duration"), out float result) ? result : -1.0f;
-                                string pictureanimation = query.Get("animation") ?? "none";
-                                
-                                if (query.Count == 1)
-                                {
-                                    // This is certainly a game marquee, provided during new game
-                                    // If path corresponds to an existing file, set game marquee
-                                    if (File.Exists($"{AppSettings.artworkPath}/{picturepath}"))
-                                        gGameMarquee = picturepath;
-                                    // Reset scores for all players
-                                    for (int i = 1; i <= 4; i++)
-                                        gScore[i] = 0;
-                                }
-                                if (!DisplayPicture(picturepath, pictureduration, pictureanimation))
-                                {
-                                    sReturn = $"Picture or video not found: {picturepath}";
-                                }
-                                else
-                                {
-                                    sReturn = "OK";
-                                }
-                                break;
-                            case "text":
-                                string text = query.Get("text") ?? "";
-                                string size = query.Get("size") ?? "M";
-                                string color = query.Get("color") ?? "FFFFFF";
-                                string font = query.Get("font") ?? "Consolas";
-                                string bordercolor = query.Get("bordercolor") ?? "000000";
-                                string bordersize = query.Get("bordersize") ?? "0";
-                                string animation = query.Get("animation") ?? "none";
-                                float textduration = float.TryParse(query.Get("duration"), out float tresult) ? tresult : 5.0f;
-                                LogIt($"Text is now set to: {text} with size {size} ,color {color} ,font {font} ,border color {bordercolor}, border size {bordersize}, animation {animation} with a duration of {textduration} seconds");
-                                bool cleanbg;
-                                if (!bool.TryParse(query.Get("cleanbg"), out cleanbg))
-                                {
-                                    cleanbg = true; // valor predeterminado si la conversión falla
-                                }
+                            gDmdDevice.Post(() =>
+                            {
+                                LogIt("Cancel Rendering");
+                                _queue.RemoveAllScenes();
+                                gDmdDevice.Graphics.Clear(Color.Black);
+                                gDmdDevice.Stage.RemoveAll();
+                                gDmdDevice.Stage.AddActor(_queue);
+                                gDmdDevice.Stage.AddActor(_scoreBoard);
+                                _scoreBoard.Visible = false;
+                                if (_queue.IsFinished()) _queue.Visible = false;
+                            });
+                            sReturn = "Marquee cleared";
+                            break;
+                        case "exit":
+                            Environment.Exit(0);
+                            break;
+                        case "version":
+                            sReturn = "1.0";
+                            break;
+                        case "display":
+                            switch (urlParts[3])
+                            {
+                                case "picture":
+                                    //[url_prefix]/v1/display/picture?path=<image or video path>&animation=<fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>&fixed=<true|false>
+                                    string picturepath = query.Get("path");
+                                    string pFixed = query.Get("fixed") ?? "false";
+                                    float pictureduration = float.TryParse(query.Get("duration"), out float result) ? result : 5.0f;
+                                    string pictureanimation = query.Get("animation") ?? "none";
 
-                                if (DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration))
-                                {
-                                    sReturn = "OK";
-                                }
-                                else
-                                {
-                                    sReturn = "Error when displaying text";
-                                }
-                                break;
-                            case "advanced":
-                                string advtext = query.Get("text") ?? "";
-                                string advpath = query.Get("path") ?? "";
-                                string advsize = query.Get("size") ?? "M";
-                                string advcolor = query.Get("color") ?? "FFFFFF";
-                                string advfont = query.Get("font") ?? "Consolas";
-                                string advbordercolor = query.Get("bordercolor") ?? "0000FF";
-                                string advbordersize = query.Get("bordersize") ?? "0";
-                                string animationIn = query.Get("animationin") ?? "none";
-                                string animationOut = query.Get("animationout") ?? "none";
-                                float advtextduration = float.TryParse(query.Get("duration"), out float aresult) ? aresult : 5.0f;
-                                LogIt($"Advanced Text is now set to: {advtext} with size {advsize} ,color {advcolor} ,font {advfont} ,border color {advbordercolor}, border size {advbordersize}, animation In {animationIn}, animation Out {animationOut} with a duration of {advtextduration} seconds");
-                                bool advcleanbg;
-                                if (!bool.TryParse(query.Get("cleanbg"), out advcleanbg))
-                                {
-                                    cleanbg = true; // valor predeterminado si la conversión falla
-                                }
+                                    if (StringComparer.OrdinalIgnoreCase.Compare(pFixed, "true") == 0)
+                                    {
+                                        pictureduration = -1.0f;
+                                    }
+                                    if (query.Count == 1)
+                                    {
+                                        // This is certainly a game marquee, provided during new game
+                                        // If path corresponds to an existing file, set game marquee
+                                        if (File.Exists($"{AppSettings.artworkPath}/{picturepath}"))
+                                            gGameMarquee = picturepath;
+                                        // Reset scores for all players
+                                        for (int i = 1; i <= 4; i++)
+                                            gScore[i] = 0;
+                                    }
+                                    if (!DisplayPicture(picturepath, pictureduration, pictureanimation))
+                                    {
+                                        sReturn = $"Picture or video not found: {picturepath}";
+                                    }
+                                    else
+                                    {
+                                        sReturn = "OK";
+                                    }
+                                    break;
+                                case "text":
+                                    string text = query.Get("text") ?? "";
+                                    string size = query.Get("size") ?? "M";
+                                    string color = query.Get("color") ?? "FFFFFF";
+                                    string font = query.Get("font") ?? "Consolas";
+                                    string bordercolor = query.Get("bordercolor") ?? "000000";
+                                    string bordersize = query.Get("bordersize") ?? "0";
+                                    string animation = query.Get("animation") ?? "none";
+                                    float textduration = float.TryParse(query.Get("duration"), out float tresult) ? tresult : 5.0f;
+                                    LogIt($"Text is now set to: {text} with size {size} ,color {color} ,font {font} ,border color {bordercolor}, border size {bordersize}, animation {animation} with a duration of {textduration} seconds");
+                                    bool cleanbg;
+                                    if (!bool.TryParse(query.Get("cleanbg"), out cleanbg))
+                                    {
+                                        cleanbg = true; // valor predeterminado si la conversión falla
+                                    }
 
-                                if (AdvancedDisplay(advtext, advpath, advsize, advcolor, advfont, advbordercolor, advbordersize, advcleanbg, animationIn, animationOut, advtextduration))
-                                {
-                                    sReturn = "OK";
-                                }
-                                else
-                                {
-                                    sReturn = "Error when displaying advanced scene";
-                                }
-                                break;
-                            case "score":
-                                // [url_prefix]/v1/display/score?player=<active player>&score=<score>&cleanbg=<true|false>
-                                gActivePlayer = int.TryParse(query.Get("player"), out int parsedAPlayer) ? parsedAPlayer : gActivePlayer;
-                                gScore[gActivePlayer] = int.Parse(query.Get("score"));
-                                gNbPlayers = 4;
-                                bool sCleanbg;
-                                if (!bool.TryParse(query.Get("cleanbg"), out sCleanbg))
-                                {
-                                    sCleanbg = true; // valor predeterminado si la conversión falla
-                                }
+                                    if (DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration))
+                                    {
+                                        sReturn = "OK";
+                                    }
+                                    else
+                                    {
+                                        sReturn = "Error when displaying text";
+                                    }
+                                    break;
+                                case "advanced":
+                                    string advtext = query.Get("text") ?? "";
+                                    string advpath = query.Get("path") ?? "";
+                                    string advsize = query.Get("size") ?? "M";
+                                    string advcolor = query.Get("color") ?? "FFFFFF";
+                                    string advfont = query.Get("font") ?? "Consolas";
+                                    string advbordercolor = query.Get("bordercolor") ?? "0000FF";
+                                    string advbordersize = query.Get("bordersize") ?? "0";
+                                    string animationIn = query.Get("animationin") ?? "none";
+                                    string animationOut = query.Get("animationout") ?? "none";
+                                    float advtextduration = float.TryParse(query.Get("duration"), out float aresult) ? aresult : 5.0f;
+                                    LogIt($"Advanced Text is now set to: {advtext} with size {advsize} ,color {advcolor} ,font {advfont} ,border color {advbordercolor}, border size {advbordersize}, animation In {animationIn}, animation Out {animationOut} with a duration of {advtextduration} seconds");
+                                    bool advcleanbg;
+                                    if (!bool.TryParse(query.Get("cleanbg"), out advcleanbg))
+                                    {
+                                        cleanbg = true; // valor predeterminado si la conversión falla
+                                    }
 
-                                if (DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], sCleanbg, gCredits))
-                                {
-                                    sReturn = "Ok";
-                                }
-                                else
-                                {
-                                    sReturn = "Error when displaying score board";
-                                }
+                                    if (AdvancedDisplay(advtext, advpath, advsize, advcolor, advfont, advbordercolor, advbordersize, advcleanbg, animationIn, animationOut, advtextduration))
+                                    {
+                                        sReturn = "OK";
+                                    }
+                                    else
+                                    {
+                                        sReturn = "Error when displaying advanced scene";
+                                    }
+                                    break;
+                                case "score":
+                                    // [url_prefix]/v1/display/score?player=<active player>&score=<score>&cleanbg=<true|false>
+                                    gActivePlayer = int.TryParse(query.Get("player"), out int parsedAPlayer) ? parsedAPlayer : gActivePlayer;
+                                    gScore[gActivePlayer] = int.Parse(query.Get("score"));
+                                    gNbPlayers = 4;
+                                    bool sCleanbg;
+                                    if (!bool.TryParse(query.Get("cleanbg"), out sCleanbg))
+                                    {
+                                        sCleanbg = true; // valor predeterminado si la conversión falla
+                                    }
 
-                                break;
-                            case "scorev2":
-                                // [url_prefix]/v1/display/scorev2?players=<number of players>&activeplayer=<active player>&score=<score>&credits=<credits>&cleanbg=<true|false>
-                                gActivePlayer = int.TryParse(query.Get("activeplayer"), out int parsedAPlayerv2) ? parsedAPlayerv2 : gActivePlayer;
-                                gScore[gActivePlayer] = int.Parse(query.Get("score"));
-                                gNbPlayers = int.TryParse(query.Get("players"), out int parsedPlayers) ? parsedPlayers : gNbPlayers;
-                                gCredits = int.TryParse(query.Get("credits"), out int parsedCredits) ? parsedCredits : gCredits;
-                                bool sCleanbgv2;
-                                if (!bool.TryParse(query.Get("cleanbg"), out sCleanbgv2))
-                                {
-                                    sCleanbgv2 = true; // valor predeterminado si la conversión falla
-                                }
+                                    if (DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], sCleanbg, gCredits))
+                                    {
+                                        sReturn = "Ok";
+                                    }
+                                    else
+                                    {
+                                        sReturn = "Error when displaying score board";
+                                    }
 
-                                if (DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], sCleanbgv2, gCredits))
-                                {
-                                    sReturn = "Ok";
-                                }
-                                else
-                                {
-                                    sReturn = "Error when displaying score board";
-                                }
+                                    break;
+                                case "scorebackground":
+                                    //[url_prefix]/v1/display/scorebackground?path=<path>
+                                    string scorebgpath = query.Get("path") ?? "";
+                                    if (DisplayScoreBackground(scorebgpath))
+                                    {
+                                        sReturn = "Ok";
+                                    }
+                                    else
+                                    {
+                                        sReturn = "Error when displaying score board background";
+                                    }
+                                    break;
+                                default:
+                                    sReturn = "Not implemented";
+                                    break;
+                            }
+                            break;
+                        default:
+                            sReturn = "Not implemented";
+                            break;
+                    }
+                    break;
+                case "v2":
+                    switch (urlParts[2])
+                    {
+                        case "blank":
+                            gGameMarquee = "";
+                            gDmdDevice.Post(() =>
+                            {
+                                LogIt("Cancel Rendering");
+                                _queue.RemoveAllScenes();
+                                gDmdDevice.Graphics.Clear(Color.Black);
+                                gDmdDevice.Stage.RemoveAll();
+                                gDmdDevice.Stage.AddActor(_queue);
+                                gDmdDevice.Stage.AddActor(_scoreBoard);
+                                _scoreBoard.Visible = false;
+                                if (_queue.IsFinished()) _queue.Visible = false;
+                            });
+                            sReturn = "Marquee cleared";
+                            break;
+                        case "exit":
+                            Environment.Exit(0);
+                            break;
+                        case "version":
+                            sReturn = "2.0";
+                            break;
+                        case "display":
+                            switch (urlParts[3])
+                            {
+                                case "score":
+                                    // [url_prefix]/v2/display/score?players=<number of players>&activeplayer=<active player>&score=<score>&credits=<credits>&cleanbg=<true|false>
+                                    gActivePlayer = int.TryParse(query.Get("activeplayer"), out int parsedAPlayerv2) ? parsedAPlayerv2 : gActivePlayer;
+                                    gScore[gActivePlayer] = int.Parse(query.Get("score"));
+                                    gNbPlayers = int.TryParse(query.Get("players"), out int parsedPlayers) ? parsedPlayers : gNbPlayers;
+                                    gCredits = int.TryParse(query.Get("credits"), out int parsedCredits) ? parsedCredits : gCredits;
+                                    bool sCleanbgv2;
+                                    if (!bool.TryParse(query.Get("cleanbg"), out sCleanbgv2))
+                                    {
+                                        sCleanbgv2 = true; // valor predeterminado si la conversión falla
+                                    }
 
-                                break;
-                            case "scorebackground":
-                                //[url_prefix]/v1/display/scorebackground?path=<path>
-                                string scorebgpath = query.Get("path") ?? "";
-                                if (DisplayScoreBackground(scorebgpath))
-                                {
-                                    sReturn = "Ok";
-                                }
-                                else
-                                {
-                                    sReturn = "Error when displaying score board background";
-                                }
-                                break;
-                            default:
-                                sReturn = "Not implemented";
-                                break;
-                        }
-                        break;
-                    default:
-                        sReturn = "Not implemented";
-                        break;
-                }
-                return sReturn;
+                                    if (DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], sCleanbgv2, gCredits))
+                                    {
+                                        sReturn = "Ok";
+                                    }
+                                    else
+                                    {
+                                        sReturn = "Error when displaying score board";
+                                    }
+
+                                    break;
+                                default:
+                                    sReturn = "Not implemented";
+                                    break;
+                            }
+                            break;
+                        default:
+                            sReturn = "Not implemented";
+                            break;
+                    }
+                    break;
+                default:
+                    sReturn = "Not implemented";
+                    break;
             }
-            else
-                return "Not implemented";
+            return sReturn;
         }
     }
     class BackgroundScene : Scene
