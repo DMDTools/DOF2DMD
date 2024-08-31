@@ -28,5 +28,7 @@ logs/
 
 # Dependencies
 FlexDMD.dll
+DMDDevice.ini
+DmdDevice64.dll
 
 # Artwork
