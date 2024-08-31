@@ -46,11 +46,17 @@ jobs:
       # Build artifacts when git tag
       - if: startsWith(github.ref, 'refs/tags/')
         name: Build
-        run: dotnet publish -r win-x64 --self-contained=false /p:PublishSingleFile=true dof2dmd/dof2dmd.csproj /p:Version=${{ github.ref_name }}
+        run: |
+          copy FlexDMD.dll dof2dmd
+          copy DmdDevice64.dll dof2dmd
+          dotnet publish -r win-x64 --self-contained=false /p:PublishSingleFile=true dof2dmd/dof2dmd.csproj /p:Version=${{ github.ref_name }}
 
       - if: "!startsWith(github.ref, 'refs/tags/')"
         name: Build
-        run: dotnet publish -r win-x64 --self-contained=false /p:PublishSingleFile=true dof2dmd/dof2dmd.csproj
+        run: |
+          copy FlexDMD.dll dof2dmd
+          copy DmdDevice64.dll dof2dmd
+          dotnet publish -r win-x64 --self-contained=false /p:PublishSingleFile=true dof2dmd/dof2dmd.csproj
 
       # Upload artifacts
       - name: Upload artifacts
