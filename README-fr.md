@@ -90,7 +90,7 @@ DOF2DMD est un serveur écoutant des requêtes HTTP simples. Une fois démarré,
   - **path**: Le chemin du fichier de l'image ou de la vidéo à afficher
   - **duration**: Si la durée est de 0 pour une animation/vidéo, elle sera limitée à la durée de la vidéo ou de l'animation. Si le temps est de -1, elle sera permanente
   - **animation**: L'animation appliquée à la scène fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None
-- `[url_prefix]/v1/display/score?player=<joueur actif>&score=<score>&cleanbg=<true|false>`  
+- `[url_prefix]/v1/display/score?players=<Nombre de joueurs>&player=<joueur actif>&score=<score>&cleanbg=<true|false>`  
   Affiche un tableau de scores avancé avec une disposition de 1 à 4 joueurs et des crédits
   - **players**: le nombre de joueurs pour la disposition des scores. Optionnel, par défaut 1
   - **player**: le joueur mis en avant
@@ -172,7 +172,7 @@ DOFLinx générera automatiquement les commandes suivantes :
   - `http://<hôte:port>/v1/display/picture?path=mame/<nom-rom>&duration=<durée>&animation=<animation>` - pour afficher un PNG pour la bannière
 - Lors de la partie :
   - `http://<hôte:port>/v1/display/score?player=<joueur actif>&score=<score>&cleanbg=<true|false>` - pour afficher le score du joueur donné
-  - `http://<hôte:port>/v1/display/scorev2?players=<nombre de joueurs>&activeplayer=<joueur actif>&score=<score>&cleanbg=<true|false>&credits=<crédits>` - pour afficher le score du joueur donné en indiquant la disposition du tableau de scores en fonction du nombre de joueurs
+  - `http://<hôte:port>/v1/display/score?players=<nombre de joueurs>&player=<joueur actif>&score=<score>&cleanbg=<true|false>&credits=<crédits>` - pour afficher le score du joueur donné en indiquant la disposition du tableau de scores en fonction du nombre de joueurs
 - Lors de la fermeture de DOFLinx :
   - `http://<hôte:port>/v1/display/score?player=1&score=0` - réinitialiser le score à 0
   - `http://<hôte:port>/v1/blank` - pour effacer le DMD (écran noir)
@@ -205,7 +205,7 @@ Une fois DOF2DMD démarré, vous pouvez utiliser votre navigateur pour le tester
 - Afficher la version [http://127.0.0.1:8080/v1/version](http://127.0.0.1:8080/v1/version) 
 - Afficher une image dans le dossier artwork, sous-dossier `mame`, image `galaga` : [http://127.0.0.1:8080/v1/display/picture?path=mame/galaga&duration=-1&animation=fade](http://127.0.0.1:8080/v1/display/picture?path=mame/galaga&duration=-1&animation=fade) 
 - Définir le score du joueur 1 (par défaut) à 1000 en utilisant la disposition par défaut pour 4 joueurs et en nettoyant la scène actuelle : [http://127.0.0.1:8080/v1/display/score?score=1000](http://127.0.0.1:8080/v1/display/score?score=1000)
-- Définir le score du joueur 2 à 3998, crédits à 5 en utilisant la disposition pour 2 joueurs sur la scène actuelle : [http://127.0.0.1:8080/v1/display/scorev2?players=2&activeplayer=2&score=3998&cleanbg=false&credits=5](http://127.0.0.1:8080/v1/display/scorev2?players=4&activeplayer=2&score=3998&cleanbg=false&credits=5)
+- Définir le score du joueur 2 à 3998, crédits à 5 en utilisant la disposition pour 2 joueurs sur la scène actuelle : [http://127.0.0.1:8080/v1/display/score?players=2&player=2&score=3998&cleanbg=false&credits=5](http://127.0.0.1:8080/v1/display/score?players=4&player=2&score=3998&cleanbg=false&credits=5)
 - Définir le joueur actif sur le joueur 2 et définir le score à 2000 en utilisant la disposition pour 2 joueurs et en nettoyant la scène actuelle : [http://127.0.0.1:8080/v1/display/score?players=2&activeplayer=2&score=2000](http://127.0.0.1:8080/v1/display/score?players=2&activeplayer=2&score=2000)
 - Afficher du texte en utilisant la taille M avec la police Back To the Future, couleur de police orange, couleur de bordure rouge, et une animation de défilement vers la droite pendant 10 secondes : [http://127.0.0.1:8080/v1/display/text?text=HELLO|friends&font=BTTF&size=M&color=FFA500&bordersize=1&bordercolor=FF0000&cleanbg=true&animation=scrollright&duration=10](http://127.0.0.1:8080/v1/display/text?text=HELLO|friends&font=BTTF&size=M&color=FFA500&bordersize=1&bordercolor=FF0000&cleanbg=true&animation=scrollright&duration=10)
 - Afficher du texte avec une image de fond en utilisant la police White Rabbit en blanc et bordure bleue avec une animation de fondu en entrée et un défilement vers la droite en sortie et en attendant 10 secondes entre les animations : [http://127.0.0.1:8080/v1/display/advanced?path=mame/DOFLinx&text=Hello%20Friends!!&font=WhiteRabbit&size=M&color=0000ff&bordersize=1&bordercolor=ffffFF&cleanbg=true&animationin=FadeIn&animationout=ScrollOffRight&duration=10](http://127.0.0.1:8080/v1/display/advanced?path=mame/DOFLinx&text=Hello%20Friends!!&font=WhiteRabbit&size=M&color=0000ff&bordersize=1&bordercolor=ffffFF&cleanbg=true&animationin=FadeIn&animationout=ScrollOffRight&duration=10)
