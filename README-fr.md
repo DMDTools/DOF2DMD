@@ -91,17 +91,12 @@ DOF2DMD est un serveur écoutant des requêtes HTTP simples. Une fois démarré,
   - **duration**: Si la durée est de 0 pour une animation/vidéo, elle sera limitée à la durée de la vidéo ou de l'animation. Si le temps est de -1, elle sera permanente
   - **animation**: L'animation appliquée à la scène fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None
 - `[url_prefix]/v1/display/score?player=<joueur actif>&score=<score>&cleanbg=<true|false>`  
-  Affiche un tableau de scores pour 4 joueurs
+  Affiche un tableau de scores avancé avec une disposition de 1 à 4 joueurs et des crédits
+  - **players**: le nombre de joueurs pour la disposition des scores. Optionnel, par défaut 1
   - **player**: le joueur mis en avant
   - **score**: La valeur du score à afficher pour le joueur actif
   - **cleanbg**: Nettoie l'écran actif (si non nettoyé, le score sera affiché par-dessus l'image/l'animation actuelle)
-- `[url_prefix]/v1/display/scorev2?players=<nombre de joueurs>&activeplayer=<joueur actif>&score=<score>&cleanbg=<true|false>&credits=<crédits>`  
-  Affiche un tableau de scores avancé avec une disposition de 1 à 4 joueurs et des crédits
-  - **players**: le nombre de joueurs pour la disposition des scores
-  - **activeplayer**: le joueur mis en avant
-  - **score**: La valeur du score à afficher pour le joueur actif
-  - **cleanbg**: Nettoie l'écran actif (si non nettoyé, le score sera affiché par-dessus l'image/l'animation actuelle)
-  - **credits**: Crédits insérés dans le jeu
+  - **credits**: Crédits insérés dans le jeu. Optionnel
 - `[url_prefix]/v1/display/scorebackground?path=<chemin de l'image ou de la vidéo>`  
   Ajoute une image, une animation GIF ou une vidéo en tant que fond sur le tableau de scores. 
   - **path**: Le chemin du fichier de l'image ou de la vidéo à afficher/ajouter au tableau de scores
