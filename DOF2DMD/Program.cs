@@ -872,10 +872,11 @@ namespace DOF2DMD
                                     }
                                     break;
                                 case "score":
-                                    // [url_prefix]/v1/display/score?player=<active player>&score=<score>&cleanbg=<true|false>
+                                    // [url_prefix]/v1/display/score?players=<number of players>&player=<active player>&score=<score>&cleanbg=<true|false>
                                     gActivePlayer = int.TryParse(query.Get("player"), out int parsedAPlayer) ? parsedAPlayer : gActivePlayer;
                                     gScore[gActivePlayer] = int.Parse(query.Get("score"));
-                                    gNbPlayers = 4;
+                                    gNbPlayers = int.TryParse(query.Get("players"), out int parsedPlayers) ? parsedPlayers : gNbPlayers;
+                                    gCredits = int.TryParse(query.Get("credits"), out int parsedCredits) ? parsedCredits : gCredits;
                                     bool sCleanbg;
                                     if (!bool.TryParse(query.Get("cleanbg"), out sCleanbg))
                                     {
@@ -903,65 +904,6 @@ namespace DOF2DMD
                                     {
                                         sReturn = "Error when displaying score board background";
                                     }
-                                    break;
-                                default:
-                                    sReturn = "Not implemented";
-                                    break;
-                            }
-                            break;
-                        default:
-                            sReturn = "Not implemented";
-                            break;
-                    }
-                    break;
-                case "v2":
-                    switch (urlParts[2])
-                    {
-                        case "blank":
-                            gGameMarquee = "";
-                            gDmdDevice.Post(() =>
-                            {
-                                LogIt("Cancel Rendering");
-                                _queue.RemoveAllScenes();
-                                gDmdDevice.Graphics.Clear(Color.Black);
-                                gDmdDevice.Stage.RemoveAll();
-                                gDmdDevice.Stage.AddActor(_queue);
-                                gDmdDevice.Stage.AddActor(_scoreBoard);
-                                _scoreBoard.Visible = false;
-                                if (_queue.IsFinished()) _queue.Visible = false;
-                            });
-                            sReturn = "Marquee cleared";
-                            break;
-                        case "exit":
-                            Environment.Exit(0);
-                            break;
-                        case "version":
-                            sReturn = "2.0";
-                            break;
-                        case "display":
-                            switch (urlParts[3])
-                            {
-                                case "score":
-                                    // [url_prefix]/v2/display/score?players=<number of players>&activeplayer=<active player>&score=<score>&credits=<credits>&cleanbg=<true|false>
-                                    gActivePlayer = int.TryParse(query.Get("activeplayer"), out int parsedAPlayerv2) ? parsedAPlayerv2 : gActivePlayer;
-                                    gScore[gActivePlayer] = int.Parse(query.Get("score"));
-                                    gNbPlayers = int.TryParse(query.Get("players"), out int parsedPlayers) ? parsedPlayers : gNbPlayers;
-                                    gCredits = int.TryParse(query.Get("credits"), out int parsedCredits) ? parsedCredits : gCredits;
-                                    bool sCleanbgv2;
-                                    if (!bool.TryParse(query.Get("cleanbg"), out sCleanbgv2))
-                                    {
-                                        sCleanbgv2 = true; // valor predeterminado si la conversión falla
-                                    }
-
-                                    if (DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], sCleanbgv2, gCredits))
-                                    {
-                                        sReturn = "Ok";
-                                    }
-                                    else
-                                    {
-                                        sReturn = "Error when displaying score board";
-                                    }
-
                                     break;
                                 default:
                                     sReturn = "Not implemented";
