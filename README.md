@@ -95,17 +95,12 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
   - **duration**: If the duration is 0 in an animation/video, it will be limited to the duration of the video or animation. If the time is -1, it will be permanent
   - **animation**: The animation applied to the scene fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None
 - `[url_prefix]/v1/display/score?player=<active player>&score=<score>&cleanbg=<true|false>`  
-  Display a score board of 4 players
+  Display a score board using a layout from 1 to 4 players and credits**
+  - **players**: the number of players for score layout. Optional, default 1
   - **player**: the highlighted player
   - **score**: The score value to be displayed for active player
+  - **credits**: Credits inserted in the game. Optional
   - **cleanbg**: Clean the active screen (when not cleaned the score will showed over the current image/animation
-- `[url_prefix]/v1/display/scorev2?players=<number of players>&activeplayer=<active player>&score=<score>&cleanbg=<true|false>&credits=<credits>`  
-  Display an advanced score board using a layout from 1 to 4 players and credits**
-  - **players**: the number of players for score layout
-  - **activeplayer**: the highlighted player
-  - **score**: The score value to be displayed for active player
-  - **cleanbg**: Clean the active screen (when not cleaned the score will showed over the current image/animation
-  - **credits**: Credits inserted in the game
 - `[url_prefix]/v1/display/scorebackground?path=<image or video path>`  
   Add an image, gif animation or video as background on the Score board. 
   - **path**: The file path of the image or video to be displayed/added to de Score Board
