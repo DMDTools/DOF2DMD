@@ -62,14 +62,14 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: DOF2DMD_$Version
+          name: DOF2DMD
           path: .\DOF2DMD\bin\Release\net8.0-windows\win-x64\publish
           retention-days: 7
 
       - name: Generate zip bundle
         run: |
           # tree /f
-          7z a -tzip DOF2DMD_$Version.zip .\DOF2DMD\bin\Release\net8.0-windows\win-x64\publish\*
+          7z a -tzip DOF2DMD.zip .\DOF2DMD\bin\Release\net8.0-windows\win-x64\publish\*
       
       - if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
         name: Publish latest pre-release
@@ -90,4 +90,4 @@ jobs:
           prerelease: false
           allowUpdates: true
           artifacts: |
-            DOF2DMD_$Version.zip
+            DOF2DMD.zip
