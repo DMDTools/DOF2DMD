@@ -32,7 +32,7 @@ uses [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
 ## Setup
 
 - Download and install dotnet 8 "Runtime desktop" from Microsoft: https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.6-windows-x64-installer
-- Download DOF2DMD from [Release section](https://github.com/ojacques/DOF2DMD/releases), create a folder and extract the content of the archive in this folder
+- Download DOF2DMD from [Release section](https://github.com/DMDTools/DOF2DMD/releases), create a folder and extract the content of the archive in this folder
 - Tweak `settings.ini` if needed:
 
     ```ini
@@ -94,7 +94,7 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
   - **path**: The file path of the image or video to be displayed
   - **duration**: If the duration is 0 in an animation/video, it will be limited to the duration of the video or animation. If the time is -1, it will be permanent
   - **animation**: The animation applied to the scene fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None
-- `[url_prefix]/v1/display/score?player=<active player>&score=<score>&cleanbg=<true|false>`  
+- `[url_prefix]/v1/display/score?players=<number of players>&player=<active player>&score=<score>&cleanbg=<true|false>`  
   Display a score board using a layout from 1 to 4 players and credits**
   - **players**: the number of players for score layout. Optional, default 1
   - **player**: the highlighted player
@@ -176,7 +176,7 @@ DOFLinx will generate the following commands automatically:
   - `http://<host:port>/v1/display/picture?path=mame/<rom-name>&duration=<duration>&animation=<animation>` - to display a PNG for the marquee
 - When playing a game:
   - `http://<host:port>/v1/display/score?player=<active player>&score=<score>&cleanbg=<true|false>` - to display score of the given player
-  - `http://<host:port>/v1/display/scorev2?players=<number of players>&activeplayer=<active player>&score=<score>&cleanbg=<true|false>&credits=<credits>` - to display score of the given player inidicating the score board layout based on the number of players
+  - `http://<host:port>/v1/display/score?players=<number of players>&player=<active player>&score=<score>&cleanbg=<true|false>&credits=<credits>` - to display score of the given player inidicating the score board layout based on the number of players
 - When closing DOFLinx:
   - `http://<host:port>/v1/display/score?player=1&score=0` - reset score to 0
   - `http://<host:port>/v1/blank` - to clear the DMD (goes to black)
@@ -210,8 +210,8 @@ Once DOF2DMD is started, you can use your browser to test it:
 - Show version [http://127.0.0.1:8080/v1/version](http://127.0.0.1:8080/v1/version) 
 - Display picture in the artwork folder, subfolder `mame`, picture `galaga`: [http://127.0.0.1:8080/v1/display/picture?path=mame/galaga&duration=-1&animation=fade](http://127.0.0.1:8080/v1/display/picture?path=mame/galaga&duration=-1&animation=fade) 
 - Set score of player 1 (default) to 1000 using default 4 player layout and cleaning the current scene: [http://127.0.0.1:8080/v1/display/score?score=1000](http://127.0.0.1:8080/v1/display/score?score=1000)
-- Set score of player 2 to 3998, credits to 5 using 2 player layout over the current scene: [http://127.0.0.1:8080/v1/display/scorev2?players=2&activeplayer=2&score=3998&cleanbg=false&credits=5](http://127.0.0.1:8080/v1/display/scorev2?players=4&activeplayer=2&score=3998&cleanbg=false&credits=5)
-- Set active player to player 2 and set score to 2000 using 2 players layout cleaning the current scene: [http://127.0.0.1:8080/v1/display/score?players=2&activeplayer=2&score=2000](http://127.0.0.1:8080/v1/display/score?players=2&activeplayer=2&score=2000)
+- Set score of player 2 to 3998, credits to 5 using 2 player layout over the current scene: [http://127.0.0.1:8080/v1/display/scorev2?players=2&activeplayer=2&score=3998&cleanbg=false&credits=5](http://127.0.0.1:8080/v1/display/score?players=4&player=2&score=3998&cleanbg=false&credits=5)
+- Set active player to player 2 and set score to 2000 using 2 players layout cleaning the current scene: [http://127.0.0.1:8080/v1/display/score?players=2&player=2&score=2000](http://127.0.0.1:8080/v1/display/score?players=2&player=2&score=2000)
 - Show text using M size with Back To the Future Font, orange font color, red border font color and scroll right animation during 10 seconds: [http://127.0.0.1:8080/v1/display/text?text=HELLO|friends&font=BTTF&size=M&color=FFA500&bordersize=1&bordercolor=FF0000&cleanbg=true&animation=scrollright&duration=10](http://127.0.0.1:8080/v1/display/text?text=HELLO|friends&font=BTTF&size=M&color=FFA500&bordersize=1&bordercolor=FF0000&cleanbg=true&animation=scrollright&duration=10)
 - Show text with a background image using White Rabbit font in white and blue border using a fade animation in and a scroll right as animation out and waiting 10 seconds betwwen animations [http://127.0.0.1:8080/v1/display/advanced?path=mame/DOFLinx&text=Hello%20Friends!!&font=WhiteRabbit&size=M&color=0000ff&bordersize=1&bordercolor=ffffFF&cleanbg=true&animationin=FadeIn&animationout=ScrollOffRight&duration=10](http://127.0.0.1:8080/v1/display/advanced?path=mame/DOFLinx&text=Hello%20Friends!!&font=WhiteRabbit&size=M&color=0000ff&bordersize=1&bordercolor=ffffFF&cleanbg=true&animationin=FadeIn&animationout=ScrollOffRight&duration=10)
 - Blank the DMD [http://127.0.0.1:8080/v1/blank](http://127.0.0.1:8080/v1/blank)
