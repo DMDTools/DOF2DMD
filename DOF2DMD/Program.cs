@@ -468,22 +468,22 @@ namespace DOF2DMD
         /// <summary>
         /// Returns de correct pixel size for the font depending on the DMD size (256x64 or 128x32) and the letter based size.
         /// </summary>
-        private static string GetFontSize(string size, int width, int height)
+        private static string GetFontSize(string size.ToLower(), int width, int height)
         {
             var sizeMapping = new Dictionary<(int, int), Dictionary<string, string>>
             {
                 {
                     (128, 32), new Dictionary<string, string>
                     {
-                        { "XS", "6" }, { "S", "8" }, { "M", "12" },
-                        { "L", "16" }, { "XL", "24" }, { "XXL", "32" }
+                        { "xs", "6" }, { "s", "8" }, { "m", "12" },
+                        { "l", "16" }, { "xl", "24" }, { "xxl", "32" }
                     }
                 },
                 {
                     (256, 64), new Dictionary<string, string>
                     {
-                        { "XS", "12" }, { "S", "16" }, { "M", "24" },
-                        { "L", "32" }, { "XL", "48" }, { "XXL", "64" }
+                        { "xs", "12" }, { "s", "16" }, { "m", "24" },
+                        { "l", "32" }, { "xl", "48" }, { "xxl", "64" }
                     }
                 }
             };
@@ -493,7 +493,7 @@ namespace DOF2DMD
                 return newSize;
             }
 
-            return sizeMapping.ContainsKey((width, height)) ? sizeDict["S"] : "8";
+            return sizeMapping.ContainsKey((width, height)) ? sizeDict["s"] : "8";
         }
 
         private static BackgroundScene CreateTextBackgroundScene(string animation, Actor currentActor, string text, FlexDMD.Font myFont, float duration)
@@ -588,7 +588,9 @@ namespace DOF2DMD
                                                "");
 
                     _queue.Visible = true;
-
+                    gDmdDevice.Graphics.Clear(Color.Black);
+                    _scoreBoard.Visible = false;
+                    
                     // Add scene to the queue or directly to the stage
                     if (cleanbg)
                     {
