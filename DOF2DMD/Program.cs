@@ -426,7 +426,10 @@ namespace DOF2DMD
                     // Create font and label actor
                     FlexDMD.Font myFont = gDmdDevice.NewFont(localFontPath, HexToColor(color), HexToColor(bordercolor), border);
                     var labelActor = (Actor)gDmdDevice.NewLabel("MyLabel", myFont, text);
-
+                    
+                    gDmdDevice.Graphics.Clear(Color.Black);
+                     _scoreBoard.Visible = false;
+                    
                     var currentActor = new Actor();
                     if (cleanbg)
                     {
