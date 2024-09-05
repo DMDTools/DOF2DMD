@@ -13,7 +13,7 @@ class UserConfig </ help="Attract-Mode plug-in (v1.0) for use with DMD Led RGB M
 	game_info="Yes";
 	</ label="External DOF2DMD server", help="Select if DOF2DMD server is launched outside Attract-Mode otherwise run it from plugin folder", order=2, options="Yes,No" />
 	external_dof2dmd="No";
-	</ label="DOF2DMD server path", help="Select DOF2DMD server path if not running from DOFLinx or similar", order=3, options="Yes,No" />
+	</ label="DOF2DMD server path", help="Select DOF2DMD server path if not running from DOFLinx or similar", order=3 />
 	path_dof2dmd = fe.script_dir + "dof2dmd.exe"; 
 }
 
