@@ -468,8 +468,9 @@ namespace DOF2DMD
         /// <summary>
         /// Returns de correct pixel size for the font depending on the DMD size (256x64 or 128x32) and the letter based size.
         /// </summary>
-        private static string GetFontSize(string size.ToLower(), int width, int height)
+        private static string GetFontSize(string size, int width, int height)
         {
+            size = size.ToLower();
             var sizeMapping = new Dictionary<(int, int), Dictionary<string, string>>
             {
                 {
