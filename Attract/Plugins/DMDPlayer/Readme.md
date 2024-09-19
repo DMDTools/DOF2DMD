@@ -7,7 +7,7 @@ Setup:
 3. Activate the plugin 
 4. Configure the plugin parameters
 
-As Attract-mode usually gets the marquees from the path specified in each emulator definition, the DOF2DMD artwork_path from settings.ini file must be configured as follows:
+As Attract-mode usually gets the marquees from the path specified in each emulator definition, the DOF2DMD artwork_path parameter from settings.ini file must be configured as follows to use absolute paths
 
 artwork_path=
 
