@@ -219,6 +219,12 @@ Once DOF2DMD is started, you can use your browser to test it:
 
 or use the [`demo.ps1`](/DOF2DMD/demo.ps1) and [`demo2.ps1`](/DOF2DMD/demo2.ps1) PowerShell script.
 
+## Frontends plugin
+
+- A plugin for [Attract-Mode](https://attractmode.org/) which interfaces with DOF2DMD to show systems, game marquees and info when browsing
+  games is done and can found in [Attract/DMDPlayer](https://github.com/DMDTools/DOF2DMD/tree/main/Attract/Plugins/DMDPlayer)
+
+
 ## TODO
 
 Here is what I plan to implement : 
@@ -228,9 +234,6 @@ Here is what I plan to implement :
 - A plugin for [Launch box / big box](http://pluginapi.launchbox-app.com/) which
   interfaces with DOF2DMD to show systems and game marquees when browsing
   games (partially implemented)
-- A plugin for [Attract-Mode](https://attractmode.org/) which
-  interfaces with DOF2DMD to show systems and game marquees when browsing
-  games
 
 
 ## 💬 Questions and support
