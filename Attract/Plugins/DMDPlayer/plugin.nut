@@ -49,7 +49,7 @@ class DMDPlayer
 				fe.plugin_command_bg( command_dmdplay , "\"" + url + "exit\"");
 				fe.plugin_command_bg( command_server , "");
 			}
-			fe.plugin_command_bg( command_dmdplay , "\"" + url + "display/picture?path=./attract&duration=-1&animation=none\"");
+			fe.plugin_command_bg( command_dmdplay , "\"" + url + "display/picture?path=" + urlEncodePath( fe.script_dir + "attract") + "&duration=-1&animation=none\"");
 				
 		}
 	}
