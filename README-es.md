@@ -204,6 +204,10 @@ Una vez que DOF2DMD esté iniciado, puedes usar tu navegador para probarlo:
 
 O usa los scripts de PowerShell [`demo.ps1`](/DOF2DMD/demo.ps1) y [`demo2.ps1`](/DOF2DMD/demo2.ps1).
 
+## Plugins para Frontends
+
+- El plugin para [Attract-Mode](https://attractmode.org/) que se interfase con DOF2DMD para mostrar sistemas, marquesinas e información de juegos al navegar por los juegos ya está creado y se puede encontrar en [Attract/DMDPlayer](https://github.com/DMDTools/DOF2DMD/tree/main/Attract/Plugins/DMDPlayer)
+
 ## TODO
 
 Esto es lo que se planea implementar:
@@ -211,7 +215,7 @@ Esto es lo que se planea implementar:
 - Llamadas a la API que aún no están implementadas
 - Todo lo que falta en el `settings.ini`
 - Un plugin para [LaunchBox / BigBox](http://pluginapi.launchbox-app.com/) que se interfase con DOF2DMD para mostrar sistemas y marquesinas de juegos al navegar por los juegos (implementado parcialmente)
-- Un plugin para [Attract-Mode](https://attractmode.org/) que se interfase con DOF2DMD para mostrar sistemas y marquesinas de juegos al navegar por los juegos (en proceso)
+
 
 ## ??? Preguntas y soporte
 
