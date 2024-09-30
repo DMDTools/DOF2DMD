@@ -34,7 +34,7 @@ class DMDPlayer
 		config = fe.get_config();
 		
 		command_server = config["path_dof2dmd"];
-		if ( debug_mode ) print( printprefix + " servidor: " + command_server);
+		
 		fe.add_transition_callback( this, "on_transition" );	
 		
 		//We'll use a persistent value in the fe.nv table to determine if this is the first time the plugin is loaded.
@@ -51,12 +51,17 @@ class DMDPlayer
 			if ( debug_mode ) print( printprefix + "EVENT_FE_START" + "\n" );
 			if(config["external_dof2dmd"] == "No")
 			{
-				if ( debug_mode ) print( printprefix + "Estoy aquí servidor: " + command_server);
 				fe.plugin_command_bg( command_dmdplay , "\"" + url + "exit\"");
 				fe.plugin_command_bg( command_server , "");
+				fe.plugin_command_bg( command_dmdplay , "\"" + url + "blank\" & timeout 5 > NUL & curl --url \"" + url + "display/picture?path=" + urlEncodePath( fe.script_dir + "Attract") + "&duration=-1&animation=none\"");
+
 			}
-			fe.plugin_command_bg( command_dmdplay , "\"" + url + "display/picture?path=" + urlEncodePath( fe.script_dir + "attract") + "&duration=-1&animation=none\"");
-				
+			else
+			{
+				if ( debug_mode ) print(command_dmdplay + "\"" + url + "display/picture?path=" + urlEncodePath( fe.script_dir + "Attract") + "&duration=-1&animation=none\"");
+				fe.plugin_command_bg(command_dmdplay , "\"" + url + "display/picture?path=" + urlEncodePath( fe.script_dir + "Attract") + "&duration=-1&animation=none\"");
+			}	
+			
 		}
 	}
 	function getFilenameWithoutExtension(filename) 
