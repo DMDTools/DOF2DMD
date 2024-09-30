@@ -14,22 +14,27 @@ class UserConfig </ help="Attract-Mode plug-in (v1.0) for use with DMD Led RGB M
 	</ label="External DOF2DMD server", help="Select if DOF2DMD server is launched outside Attract-Mode otherwise run it from plugin folder", order=2, options="Yes,No" />
 	external_dof2dmd="No";
 	</ label="DOF2DMD server path", help="Select DOF2DMD server path if not running from DOFLinx or similar", order=3 />
-	path_dof2dmd = fe.script_dir + "dof2dmd.exe"; 
+	path_dof2dmd = "dof2dmd.exe"; 
 }
 
 class DMDPlayer
 {
-	command_server = config["path_dof2dmd"];
+	command_server = null;
+	config = null;
 	url = "http://127.0.0.1:8080/v1/"; 
 	command_dmdplay = "curl --url "
-	config = null;
+	
 	last_transition = "none";
 	debug_mode = true;
 	printprefix = ">>>>>> ";
 
 	constructor()
 	{
+		
 		config = fe.get_config();
+		
+		command_server = config["path_dof2dmd"];
+		if ( debug_mode ) print( printprefix + " servidor: " + command_server);
 		fe.add_transition_callback( this, "on_transition" );	
 		
 		//We'll use a persistent value in the fe.nv table to determine if this is the first time the plugin is loaded.
@@ -46,6 +51,7 @@ class DMDPlayer
 			if ( debug_mode ) print( printprefix + "EVENT_FE_START" + "\n" );
 			if(config["external_dof2dmd"] == "No")
 			{
+				if ( debug_mode ) print( printprefix + "Estoy aquí servidor: " + command_server);
 				fe.plugin_command_bg( command_dmdplay , "\"" + url + "exit\"");
 				fe.plugin_command_bg( command_server , "");
 			}
