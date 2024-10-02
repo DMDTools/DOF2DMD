@@ -80,8 +80,8 @@ class DMDPlayer
 	}
 function urlEncodePath(path) {
 // Crear una expresión regular para buscar caracteres especiales
-    
-	local re = regexp("[\\s!\"#$%&'()*+,./:;<=>?@^_`{|}~\\\\]");
+    //local re = regexp("[\\s!\"#$%&'()*+,./:;<=>?@[\\]^_`{|}~]");
+	  local re = regexp("[\\s!\"#$%&'()*+,./:;<=>?@^_`{|}~\\\\]");
 
     // Crear un diccionario de caracteres a reemplazar con sus secuencias de escape
     local replacements = {
@@ -162,7 +162,7 @@ function urlEncodePath(path) {
 				local marquefilename = getFilenameWithoutExtension(fe.get_art( "marquee" ));
 				if ( debug_mode ) print( printprefix + "ToGame " + command_dmdplay  + "\"" + url + "display/picture?path=" + urlEncodePath(marquefilename) + "&duration=-1&animation=none\"\n" );
 				fe.plugin_command_bg( command_dmdplay  , "\"" + url + "display/picture?path=" + urlEncodePath(marquefilename) + "&duration=-1&animation=none\"");
-				if (config["game_info"] == "Yes" && !(fe.list.name == "Displays Menu"))
+				if (config["game_info"] == "Yes" && (!(fe.list.name == "Displays Menu") && fe.game_info(Info.Emulator) != "@"))
 				{
 					if ( debug_mode ) print( printprefix + "ToGame " + command_dmdplay + "\"" + url + "display/text?text=" + urlEncodePath(  fe.game_info(Info.Emulator) + " - " + fe.game_info(Info.Title)  + "|" + fe.game_info(Info.Year) + "  " + fe.game_info(Info.Manufacturer)) + "&size=S&color=FFFFFF&font=Consolas&bordercolor=000000&bordersize=1&cleanbg=false&animation=ScrollLeft&duration=20\"\n" );
 					fe.plugin_command_bg( command_dmdplay  , "\"" + url + "display/text?text=" + urlEncodePath(  fe.game_info(Info.Emulator) + " - " + fe.game_info(Info.Title)  + "|" + fe.game_info(Info.Year) + "  " + fe.game_info(Info.Manufacturer)) + "&size=S&color=FFFFFF&font=Consolas&bordercolor=000000&bordersize=1&cleanbg=false&animation=ScrollLeft&duration=20\"");
@@ -182,7 +182,7 @@ function urlEncodePath(path) {
 				local marquefilename = getFilenameWithoutExtension(fe.get_art( "marquee" ));
 				if ( debug_mode ) print( printprefix + "FromGame " + command_dmdplay  + "\"" + url + "display/picture?path=" + urlEncodePath(marquefilename) + "&duration=-1&animation=none\"\n" );
 				fe.plugin_command_bg( command_dmdplay  , "\"" + url + "display/picture?path=" + urlEncodePath(marquefilename) + "&duration=-1&animation=none\"");
-				if (config["game_info"] == "Yes" && !(fe.list.name == "Displays Menu"))
+				if (config["game_info"] == "Yes" && (!(fe.list.name == "Displays Menu") && fe.game_info(Info.Emulator) != "@"))
 				{
 					if ( debug_mode ) print( printprefix + "FromGame " + command_dmdplay + "\"" + url + "display/text?text=" + urlEncodePath(  fe.game_info(Info.Emulator) + " - " + fe.game_info(Info.Title)  + "|" + fe.game_info(Info.Year) + "  " + fe.game_info(Info.Manufacturer)) + "&size=S&color=FFFFFF&font=Consolas&bordercolor=000000&bordersize=1&cleanbg=false&animation=ScrollLeft&duration=20\"\n" );
 					fe.plugin_command_bg( command_dmdplay  , "\"" + url + "display/text?text=" + urlEncodePath(  fe.game_info(Info.Emulator) + " - " + fe.game_info(Info.Title)  + "|" + fe.game_info(Info.Year) + "  " + fe.game_info(Info.Manufacturer)) + "&size=S&color=FFFFFF&font=Consolas&bordercolor=000000&bordersize=1&cleanbg=false&animation=ScrollLeft&duration=20\"");
@@ -197,7 +197,7 @@ function urlEncodePath(path) {
 				local marquefilename = getFilenameWithoutExtension(fe.get_art( "marquee" ));
 				if ( debug_mode ) print( printprefix + "StartLayout " + command_dmdplay  + "\"" + url + "display/picture?path=" + urlEncodePath(marquefilename) + "&duration=-1&animation=none\"\n" );
 				fe.plugin_command_bg( command_dmdplay  , "\"" + url + "display/picture?path=" + urlEncodePath(marquefilename) + "&duration=-1&animation=none\"");
-				if (config["game_info"] == "Yes" && !(fe.list.name == "Displays Menu"))
+				if (config["game_info"] == "Yes" && (!(fe.list.name == "Displays Menu") && fe.game_info(Info.Emulator) != "@"))
 				{
 					if ( debug_mode ) print( printprefix + "StartLayout " + command_dmdplay + "\"" + url + "display/text?text=" + urlEncodePath(  fe.game_info(Info.Emulator) + " - " + fe.game_info(Info.Title)  + "|" + fe.game_info(Info.Year) + "  " + fe.game_info(Info.Manufacturer)) + "&size=S&color=FFFFFF&font=Consolas&bordercolor=000000&bordersize=1&cleanbg=false&animation=ScrollLeft&duration=20\"\n" );
 					fe.plugin_command_bg( command_dmdplay  , "\"" + url + "display/text?text=" + urlEncodePath(  fe.game_info(Info.Emulator) + " - " + fe.game_info(Info.Title)  + "|" + fe.game_info(Info.Year) + "  " + fe.game_info(Info.Manufacturer)) + "&size=S&color=FFFFFF&font=Consolas&bordercolor=000000&bordersize=1&cleanbg=false&animation=ScrollLeft&duration=20\"");
@@ -211,7 +211,7 @@ function urlEncodePath(path) {
 				local marquefilename = getFilenameWithoutExtension(fe.get_art( "marquee" ));
 				if ( debug_mode ) print( printprefix + "HideOverlay " + command_dmdplay  + "\"" + url + "display/picture?path=" + urlEncodePath(marquefilename) + "&duration=-1&animation=none\"\n" );
 				fe.plugin_command_bg( command_dmdplay  , "\"" + url + "display/picture?path=" + urlEncodePath(marquefilename) + "&duration=-1&animation=none\"");
-				if (config["game_info"] == "Yes" && !(fe.list.name == "Displays Menu"))
+				if (config["game_info"] == "Yes" && (!(fe.list.name == "Displays Menu") && fe.game_info(Info.Emulator) != "@"))
 				{
 					if ( debug_mode ) print( printprefix + "HideOverlay " + command_dmdplay + "\"" + url + "display/text?text=" + urlEncodePath(  fe.game_info(Info.Emulator) + " - " + fe.game_info(Info.Title)  + "|" + fe.game_info(Info.Year) + "  " + fe.game_info(Info.Manufacturer)) + "&size=S&color=FFFFFF&font=Consolas&bordercolor=000000&bordersize=1&cleanbg=false&animation=ScrollLeft&duration=20\"\n" );
 					fe.plugin_command_bg( command_dmdplay  , "\"" + url + "display/text?text=" + urlEncodePath(  fe.game_info(Info.Emulator) + " - " + fe.game_info(Info.Title)  + "|" + fe.game_info(Info.Year) + "  " + fe.game_info(Info.Manufacturer)) + "&size=S&color=FFFFFF&font=Consolas&bordercolor=000000&bordersize=1&cleanbg=false&animation=ScrollLeft&duration=20\"");
@@ -276,7 +276,7 @@ function urlEncodePath(path) {
 				local marquefilename = getFilenameWithoutExtension(fe.get_art( "marquee" ));
 				if ( debug_mode ) print( printprefix + "ToNewList " + command_dmdplay  + "\"" + url + "display/picture?path=" + urlEncodePath(marquefilename) + "&duration=-1&animation=none\"\n" );
 				fe.plugin_command_bg( command_dmdplay  , "\"" + url + "display/picture?path=" + urlEncodePath(marquefilename) + "&duration=-1&animation=none\"");
-				if (config["game_info"] == "Yes" && !(fe.list.name == "Displays Menu"))
+				if (config["game_info"] == "Yes" && (!(fe.list.name == "Displays Menu") && fe.game_info(Info.Emulator) != "@"))
 				{
 					if ( debug_mode ) print( printprefix + "ToNewList " + command_dmdplay + "\"" + url + "display/text?text=" + urlEncodePath(  fe.game_info(Info.Emulator) + " - " + fe.game_info(Info.Title)  + "|" + fe.game_info(Info.Year) + "  " + fe.game_info(Info.Manufacturer)) + "&size=S&color=FFFFFF&font=Consolas&bordercolor=000000&bordersize=1&cleanbg=false&animation=ScrollLeft&duration=20\"\n" );
 					fe.plugin_command_bg( command_dmdplay  , "\"" + url + "display/text?text=" + urlEncodePath(  fe.game_info(Info.Emulator) + " - " + fe.game_info(Info.Title)  + "|" + fe.game_info(Info.Year) + "  " + fe.game_info(Info.Manufacturer)) + "&size=S&color=FFFFFF&font=Consolas&bordercolor=000000&bordersize=1&cleanbg=false&animation=ScrollLeft&duration=20\"");
@@ -290,7 +290,8 @@ function urlEncodePath(path) {
 				local marquefilename = getFilenameWithoutExtension(fe.get_art( "marquee" ));
 				if ( debug_mode ) print( printprefix + "FromOldSelection " + command_dmdplay  + "\"" + url + "display/picture?path=" + urlEncodePath(marquefilename) + "&duration=-1&animation=none\"\n" );
 				fe.plugin_command_bg( command_dmdplay  , "\"" + url + "display/picture?path=" + urlEncodePath(marquefilename) + "&duration=-1&animation=none\"");
-				if (config["game_info"] == "Yes" && !(fe.list.name == "Displays Menu"))
+				
+				if (config["game_info"] == "Yes" && (!(fe.list.name == "Displays Menu") && !(fe.game_info(Info.Emulator) == "@")))
 				{
 					if ( debug_mode ) print( printprefix + "FromOldSelection " + command_dmdplay + "\"" + url + "display/text?text=" + urlEncodePath(  fe.game_info(Info.Emulator) + " - " + fe.game_info(Info.Title)  + "|" + fe.game_info(Info.Year) + "  " + fe.game_info(Info.Manufacturer)) + "&size=S&color=FFFFFF&font=Consolas&bordercolor=000000&bordersize=1&cleanbg=false&animation=ScrollLeft&duration=20\"\n" );
 					fe.plugin_command_bg( command_dmdplay  , "\"" + url + "display/text?text=" + urlEncodePath(  fe.game_info(Info.Emulator) + " - " + fe.game_info(Info.Title)  + "|" + fe.game_info(Info.Year) + "  " + fe.game_info(Info.Manufacturer)) + "&size=S&color=FFFFFF&font=Consolas&bordercolor=000000&bordersize=1&cleanbg=false&animation=ScrollLeft&duration=20\"");
