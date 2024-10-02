@@ -80,7 +80,7 @@ class DMDPlayer
 	}
 function urlEncodePath(path) {
 // Crear una expresión regular para buscar caracteres especiales
-    local re = regexp("[\\s!\"#$%&'()*+,./:;<=>?@[\\]^_`{|}~]");
+    local re = regexp("[\s!\"#$%&'()*+,./:;<=>?@\\^_`{|}~]");
 
     // Crear un diccionario de caracteres a reemplazar con sus secuencias de escape
     local replacements = {
