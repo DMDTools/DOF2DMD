@@ -72,9 +72,9 @@ DOF2DMD s'appuie sur [FlexDMD](https://github.com/vbousquet/flexdmd), qui utilis
 Les images et animations doivent se trouver dans le dossier `artwork` (par défaut dans le chemin DOF2DMD sous le dossier `artwork`).
 
 > [!NOTE]
-> Je fournis un ensemble de base de visuels, afin que vous puissiez tester et commencer à éditer les fichiers `.MAME` de DOFLINX.
-Vous aurez probablement besoin de plus de visuels. Ne me demandez pas où trouver des visuels pour le DMD. Je ne peux pas aider
-là-dessus. Il existe cependant un pack que vous pouvez télécharger, et d'autres que vous pouvez acheter sur
+> Je fournis un ensemble d'images, afin que vous puissiez tester et commencer à éditer les fichiers `.MAME` de DOFLINX.
+Vous aurez probablement besoin de png/gif. J'ai créé un outil qui peut aider - [ARTWORK4DMD](https://github.com/DMDTools/artwork4DMD). 
+Pour plus de png/gif, il existe un pack que vous pouvez télécharger, et d'autres que vous pouvez acheter sur
 [Neo-Arcadia](https://www.neo-arcadia.com/forum/viewtopic.php?t=67065). Si vous
 possédez un [PixelCade](https://pixelcade.org/), vous avez droit à une énorme
 bibliothèque d'art DMD en pixel perfect. Pour créer vos propres visuels, vous pouvez utiliser un
