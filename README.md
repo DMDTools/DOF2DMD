@@ -77,8 +77,8 @@ The images and animations must be in the `artwork` folder (by default in the DOF
 
 > [!NOTE]
 > I provide a basic set of artwork, so that you can test and start editing DOFLINX's `.MAME` files.
-You probably need more artwork. Do not ask me where to find artwork for the DMD. I cannot help with
-that. There is however a pack you can download, and more you can buy from
+You probably need more artwork. I created a tool which may help - see [artwork4DMD](https://github.com/DMDTools/artwork4DMD).
+In addition, there is a pack you can download, and more you can buy from
 [Neo-Arcadia](https://www.neo-arcadia.com/forum/viewtopic.php?t=67065). If you
 own a [PixelCade](https://pixelcade.org/), then you are entitled to a massive
 pixel perfect DMD artwork library. To create your own artwork, you can use a 
