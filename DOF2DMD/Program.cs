@@ -49,6 +49,7 @@ using System.Globalization;
 using static System.Net.Mime.MediaTypeNames;
 using FlexDMD.Properties;
 using System.Collections;
+using System.Linq;
 
 
 namespace DOF2DMD
@@ -64,6 +65,9 @@ namespace DOF2DMD
         public static string gGameMarquee = "DOF2DMD";
         private static Timer _scoreTimer;
         private static Timer _animationTimer;
+        private static Timer _attractTimer;
+        private static bool _AttractModeAlternate = true;
+        private static string _currentAttractGif = null;
         private static readonly object _scoreQueueLock = new object();
         private static readonly object _animationQueueLock = new object();
         private static readonly object sceneLock = new object();
@@ -143,9 +147,69 @@ namespace DOF2DMD
 
             Trace.WriteLine($"DOF2DMD is now listening for requests on {AppSettings.UrlPrefix}...");
 
+            // Initialize and start the attract timer
+            _attractTimer = new Timer(AttractTimer, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+
             Task listenTask = HandleIncomingConnections(listener);
             listenTask.GetAwaiter().GetResult();
-        }/// <summary>
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="state"></param>
+        private static void AttractTimer(object state)
+        {
+            LogIt("⏱️ AttractTimer");
+            AttractAction();
+        }
+
+        private static void AttractAction()
+        {
+            DateTime now = DateTime.Now;
+            string currentTime = now.ToString("HH:mm:ss");
+
+            // Toggle the display mode every 10 seconds
+            if (now.Second % 10 == 0)
+            {
+                _AttractModeAlternate = !_AttractModeAlternate;
+
+                // If switching to GIF mode, select a new random GIF
+                if (!_AttractModeAlternate)
+                {
+                    SelectRandomGif();
+                    if (_currentAttractGif != null)
+                    {
+                        DisplayPicture(_currentAttractGif, -1, "none");
+                    }
+                }
+            }
+
+            if (_AttractModeAlternate)
+            {
+                DisplayText(currentTime, "XL", "FFFFFF", "WhiteRabbit", "00FF00", "1", true, "None", 1);
+            }
+
+        }
+
+
+        private static void SelectRandomGif()
+        {
+            string[] gifFiles = Directory.GetFiles(AppSettings.artworkPath, "*.gif");
+            if (gifFiles.Length > 0)
+            {
+                Random random = new Random();
+                int randomIndex = random.Next(gifFiles.Length);
+                _currentAttractGif = Path.GetFileNameWithoutExtension(gifFiles[randomIndex]);
+                Console.WriteLine($"Random GIF: {_currentAttractGif}");
+            }
+            else
+            {
+                _currentAttractGif = null;
+            }
+        }
+
+        /// <summary>
         /// Callback method once animation is finished.
         /// Displays the player's score or the game marquee picture based on the state of gScoreQueued.
         /// </summary>
@@ -361,6 +425,7 @@ namespace DOF2DMD
                     
                         return false;
                     }
+                    Trace.WriteLine($"File not found: {localPath}");
 
                     return false;
                 }

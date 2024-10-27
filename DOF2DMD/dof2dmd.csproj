@@ -19,6 +19,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Ini" Version="8.0.0" />
     <PackageReference Include="System.Drawing.Common" Version="8.0.5" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
+    <PackageReference Include="NLua" Version="1.7.3" />
   </ItemGroup>
 
   <ItemGroup>
