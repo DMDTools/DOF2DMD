@@ -283,7 +283,6 @@ namespace DOF2DMD
         /// </summary>
         public static bool DisplayPicture(string path, float duration, string animation)
         {
-            LogIt($"📷 {path}, {duration}, {animation}");
             try
             {
                 if (string.IsNullOrEmpty(path))
@@ -345,7 +344,7 @@ namespace DOF2DMD
 
                         });
 
-                        LogIt($"Rendering {(isVideo ? "video" : "image")}: {fullPath}");
+                        LogIt($"📷Rendering {(isVideo ? "video" : "image")}: {fullPath}");
                         return true;
                     }
 
@@ -790,7 +789,6 @@ namespace DOF2DMD
                                     string pFixed = query.Get("fixed") ?? "false";
                                     float pictureduration = float.TryParse(query.Get("duration"), out float result) ? result : 0.0f;
                                     string pictureanimation = query.Get("animation") ?? "none";
-                                    LogIt($"Query {query.Count}, Picture is now set to: {picturepath} with animation {pictureanimation} with a duration of {pictureduration} seconds");
                                     if (StringComparer.OrdinalIgnoreCase.Compare(pFixed, "true") == 0)
                                     {
                                         pictureduration = -1.0f;
