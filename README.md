@@ -115,7 +115,7 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
   - **text**: The text to be displayed (the text can be split into multiple lines using | as a separator)
   - **size**: The size of the text (Extra Small (XS), Small (S), Medium (M), Large (L) or Extra Large (XL))
   - **color**: The color of the text in hexadecimal format (for example: color=FFFFFF)
-  - **font**: The font family to be used for the text (Bitmap Font file, there are some samples on resources folder, only is needed to use the Font name before the _ simbol. For example: Matrix or BTTF)
+  - **font**: The font family to be used for the text (Bitmap Font file, there are some samples on resources folder, only is needed to use the Font name before the _ symbol. For example: Matrix or BTTF)
   - **bordercolor**: The color of the text border in hexadecimal format (for example: color=FFAAFF)
   - **bordersize**: The size of the text border (0 or 1)
   - **cleanbg**: Clean the active screen (when not cleaned the text will showed over the current image/animation
