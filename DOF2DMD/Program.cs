@@ -103,14 +103,14 @@ namespace DOF2DMD
             {
                 _scoreFontText = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f6by12.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
                 _scoreFontNormal = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f7by13.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
-                _scoreFontHighlight = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f12by24.fnt", Color.White, Color.Black,1);
+                _scoreFontHighlight = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f12by24.fnt", Color.Orange, Color.Red, 1);
             }
             else
             {
             
-                _scoreFontText = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f4by5.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
-                _scoreFontNormal = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f5by7.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
-                _scoreFontHighlight = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f6by12.fnt", Color.White, Color.Black,1);    
+                _scoreFontText = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f6by12.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
+                _scoreFontNormal = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f7by13.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
+                _scoreFontHighlight = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f12by24.fnt", Color.Orange, Color.Red, 1);
             }
 
             _scoreBoard = new ScoreBoard(
@@ -156,7 +156,7 @@ namespace DOF2DMD
                 LogIt("⏱️ AnimationTimer: now display score");
                 if (gScore[gActivePlayer] > 0)
                 {
-                    DisplayScoreboard(gNbPlayers, gActivePlayer, gScore[1], gScore[2], gScore[3], gScore[4], $"Player {gActivePlayer}", $"Credits {gCredits}", true);
+                    DisplayScoreboard(gNbPlayers, gActivePlayer, gScore[1], gScore[2], gScore[3], gScore[4], "", "", true);
                 }
             }
         }
@@ -231,7 +231,7 @@ namespace DOF2DMD
             gNbPlayers = cPlayers;
             gCredits = credits;
             LogIt($"DisplayScore for player {player}: {score}");
-            DisplayScoreboard(gNbPlayers, player, gScore[1], gScore[2], gScore[3], gScore[4], $"PLAYER {gActivePlayer}", $"Credits {gCredits}", sCleanbg);
+            DisplayScoreboard(gNbPlayers, player, gScore[1], gScore[2], gScore[3], gScore[4], "", "", sCleanbg);
 
             if (AppSettings.ScoreDmd != 0)
             {
