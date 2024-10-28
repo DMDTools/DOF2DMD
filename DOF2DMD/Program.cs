@@ -384,7 +384,7 @@ namespace DOF2DMD
         /// Displays text on the DMD device.
         /// %0A or | for line break
         /// </summary>
-        public static bool DisplayText(string text, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animation, float duration)
+        public static bool DisplayText(string text, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animation, float duration, bool loop)
         {
             try
             {
@@ -435,14 +435,30 @@ namespace DOF2DMD
 
                     _queue.Visible = true;
 
-                    // Add scene to the queue or directly to the stage
-                    if (cleanbg)
-                    {
-                        _queue.Enqueue(bg);
+                    if (!loop)
+                    {        
+                        // Add scene to the queue or directly to the stage
+                        if (cleanbg)
+                        {
+                            _queue.Enqueue(bg);
+                        }
+                        else
+                        {
+                            gDmdDevice.Stage.AddActor(bg);
+                        }
                     }
-                    else
-                    {
-                        gDmdDevice.Stage.AddActor(bg);
+                    while (loop)
+                    {        
+                        // Add scene to the queue or directly to the stage
+                        if (cleanbg)
+                        {
+                            _queue.Enqueue(bg);
+                        }
+                        else
+                        {
+                            gDmdDevice.Stage.AddActor(bg);
+                        }
+                        Thread.Sleep(duration*.8);
                     }
                 });
 
@@ -828,9 +844,14 @@ namespace DOF2DMD
                                     if (!bool.TryParse(query.Get("cleanbg"), out cleanbg))
                                     {
                                         cleanbg = true; // valor predeterminado si la conversión falla
+                                    } 
+                                    bool loop;
+                                    if (!bool.TryParse(query.Get("loop"), out loop))
+                                    {
+                                        loop = false; // valor predeterminado si la conversión falla
                                     }
 
-                                    if (DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration))
+                                    if (DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop))
                                     {
                                         sReturn = "OK";
                                     }
