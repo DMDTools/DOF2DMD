@@ -1186,7 +1186,7 @@ namespace DOF2DMD
             base.Begin();
 
             _container.Y = (Height - _container.Height) / 2;
-            _container.X = line.Width;
+            _container.X = label.Width;
             _tweener.Tween(_container, new { X = -Width }, _length, 0f);
         }
 
