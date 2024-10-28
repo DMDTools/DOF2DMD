@@ -1166,8 +1166,8 @@ namespace DOF2DMD
             var y = 0f;
             string[] lines = text.Split(new char[] { '\n', '|' });
 
-            //_length = pauseS;
-            _length = 3f + lines.Length * 0.2f;
+            _length = pauseS;
+            //_length = 3f + lines.Length * 0.2f;
 
             foreach (string line in lines)
             {
@@ -1198,7 +1198,7 @@ namespace DOF2DMD
                 _container.Width = Width;
                 foreach (Actor line in _container.Children)
                 {
-                    line.X = (Width - line.Width) /2;
+                    line.X = (Width - line.Width);
                 }
             }
         }
