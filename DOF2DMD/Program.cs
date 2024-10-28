@@ -458,7 +458,7 @@ namespace DOF2DMD
                         {
                             gDmdDevice.Stage.AddActor(bg);
                         }
-                        Thread.Sleep(duration*.8);
+                        Thread.Sleep((int)(duration*.8));
                     }
                 });
 
