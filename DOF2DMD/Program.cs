@@ -1186,8 +1186,8 @@ namespace DOF2DMD
             base.Begin();
 
             _container.Y = (Height - _container.Height) / 2;
-            _container.X = label.Width;
-            _tweener.Tween(_container, new { X = -Width }, _length, 0f);
+            _container.X = Width;
+            _tweener.Tween(_container, new { X = -_container.Width }, _length, 0f);
         }
 
         public override void Update(float delta)
