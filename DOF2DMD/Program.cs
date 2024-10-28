@@ -1186,7 +1186,7 @@ namespace DOF2DMD
             base.Begin();
 
             _container.Y = (Height - _container.Height) / 2;
-            _container.X = Width;
+            _container.X = line.Width;
             _tweener.Tween(_container, new { X = -Width }, _length, 0f);
         }
 
@@ -1198,7 +1198,7 @@ namespace DOF2DMD
                 _container.Width = Width;
                 foreach (Actor line in _container.Children)
                 {
-                    line.X = (Width - line.Width);
+                    line.X = (Width - line.Width)/2;
                 }
             }
         }
