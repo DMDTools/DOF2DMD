@@ -1187,7 +1187,7 @@ namespace DOF2DMD
 
             _container.Y = (Height - _container.Height) / 2;
             _container.X = Width;
-            _tweener.Tween(_container, new { X = -(Width * Width*.1) }, _length, 0f);
+            _tweener.Tween(_container, new { X = -(Width + Width*.1) }, _length, 0f);
         }
 
         public override void Update(float delta)
@@ -1238,7 +1238,7 @@ namespace DOF2DMD
             base.Begin();
             _container.Y = (Height - _container.Height) / 2;
             _container.X = -Width;
-            _tweener.Tween(_container, new { X = Width }, _length, 0f);
+            _tweener.Tween(_container, new { X = Width + Width * .1 }, _length, 0f);
         }
 
         public override void Update(float delta)
