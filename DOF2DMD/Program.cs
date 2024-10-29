@@ -384,17 +384,17 @@ namespace DOF2DMD
         /// Displays text on the DMD device.
         /// %0A or | for line break
         /// </summary>
-        public static bool DisplayText(string text, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animation, float duration, bool loop)
+       public static bool DisplayText(string text, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animation, float duration, bool loop)
         {
             try
             {
                 // Convert size to numeric value based on device dimensions
                 size = GetFontSize(size, gDmdDevice.Width, gDmdDevice.Height);
-
+        
                 //Check if the font exists
                 string localFontPath = $"resources/{font}_{size}";
                 List<string> extensions = new List<string> { ".fnt", ".png" };
-
+        
                 if (FileExistsWithExtensions(localFontPath, extensions, out string foundExtension))
                 {
                     localFontPath = localFontPath + ".fnt";
@@ -404,64 +404,60 @@ namespace DOF2DMD
                     localFontPath = $"resources/Consolas_{size}.fnt";
                     LogIt($"Font not found, using default: {localFontPath}");
                 }
-
-                
+        
                 // Determine if border is needed
                 int border = bordersize != "0" ? 1 : 0;
-
-                
-                gDmdDevice.Post(() =>
+        
+                Action displayAction = () =>
                 {
                     // Create font and label actor
                     FlexDMD.Font myFont = gDmdDevice.NewFont(localFontPath, HexToColor(color), HexToColor(bordercolor), border);
                     var labelActor = (Actor)gDmdDevice.NewLabel("MyLabel", myFont, text);
-                    
+        
                     gDmdDevice.Graphics.Clear(Color.Black);
-                     _scoreBoard.Visible = false;
-                    
+                    _scoreBoard.Visible = false;
+        
                     var currentActor = new Actor();
                     if (cleanbg)
                     {
                         _queue.RemoveAllScenes();
                     }
+        
                     if (duration > -1)
-                            {
-                                _animationTimer?.Dispose();
-                                _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
-                            }
+                    {
+                        _animationTimer?.Dispose();
+                        _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+                    }
+        
                     // Create background scene based on animation type
-                    
                     BackgroundScene bg = CreateTextBackgroundScene(animation.ToLower(), currentActor, text, myFont, duration);
-
+        
                     _queue.Visible = true;
-
-                    if (!loop)
-                    {        
-                        // Add scene to the queue or directly to the stage
-                        if (cleanbg)
-                        {
-                            _queue.Enqueue(bg);
-                        }
-                        else
-                        {
-                            gDmdDevice.Stage.AddActor(bg);
-                        }
+        
+                    // Add scene to the queue or directly to the stage
+                    if (cleanbg)
+                    {
+                        _queue.Enqueue(bg);
                     }
-                    while (loop)
-                    {        
-                        // Add scene to the queue or directly to the stage
-                        if (cleanbg)
-                        {
-                            _queue.Enqueue(bg);
-                        }
-                        else
-                        {
-                            gDmdDevice.Stage.AddActor(bg);
-                        }
-                        Thread.Sleep((int)(duration*.8));
+                    else
+                    {
+                        gDmdDevice.Stage.AddActor(bg);
                     }
-                });
-
+                };
+        
+                // Ejecutar la acción inicial
+                displayAction();
+        
+                // Si loop es verdadero, configurar el temporizador
+                if (loop)
+                {
+                    float waitDuration = duration * 0.85f; // 15% menos que la duración
+                    _animationTimer = new Timer(_ => 
+                    {
+                        gDmdDevice.Post(displayAction);
+                    }, null, (int)(waitDuration * 1000), (int)(waitDuration * 1000));
+                }
+        
                 LogIt($"Rendering text: {text}");
                 return true;
             }
@@ -470,6 +466,7 @@ namespace DOF2DMD
                 return false;
             }
         }
+
         /// <summary>
         /// Returns de correct pixel size for the font depending on the DMD size (256x64 or 128x32) and the letter based size.
         /// </summary>
