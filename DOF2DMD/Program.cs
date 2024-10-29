@@ -452,7 +452,7 @@ namespace DOF2DMD
         if (loop)
         {
             float waitDuration = duration * 0.85f; // 15% menos que la duración
-            _animationTimer = new Timer(_ => 
+            _loopTimer = new Timer(_ => 
             {
                 gDmdDevice.Post(displayAction);
             }, null, (int)(waitDuration * 1000), (int)(waitDuration * 1000));
