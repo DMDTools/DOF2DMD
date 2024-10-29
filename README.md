@@ -110,7 +110,7 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
   This endpoint exits or closes the application
 - `[url_prefix]/v1/version`
   This endpoint returns the version information of the application
-  - `[url_prefix]/v1/loopstop`
+- `[url_prefix]/v1/loopstop`
   This endpoint stops an active infinite scroll text
 - `[url_prefix]/v1/display/text?text=<text>?size=XS|S|M|L|XL&color=<hex color>&font=<font>&bordercolor=<hex color>&bordersize=<0|1>&cleanbg=<true|false>&animation=<ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>&loop=<true|false>`  
   Display some text with or without animation
