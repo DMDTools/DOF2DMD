@@ -455,14 +455,16 @@ namespace DOF2DMD
                     _animationTimer = new Timer(_ => 
                     {
                         gDmdDevice.Post(displayAction);
-                    }, null, (int)(waitDuration * 1000), (int)(waitDuration * 1000));
+                    }, null, (int)(waitDuration), (int)(waitDuration));
                 }
         
                 LogIt($"Rendering text: {text}");
                 return true;
             }
-            catch
+            
+            catch (Exception ex)
             {
+                LogIt($"Error: {ex.Message}");
                 return false;
             }
         }
