@@ -408,7 +408,7 @@ namespace DOF2DMD
                 // Determine if border is needed
                 int border = bordersize != "0" ? 1 : 0;
         
-                Action displayAction = () =>
+                System.Action displayAction = () =>
                 {
                     // Create font and label actor
                     FlexDMD.Font myFont = gDmdDevice.NewFont(localFontPath, HexToColor(color), HexToColor(bordercolor), border);
