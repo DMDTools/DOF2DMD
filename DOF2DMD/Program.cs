@@ -422,6 +422,7 @@ namespace DOF2DMD
             if (cleanbg)
             {
                 _queue.RemoveAllScenes();
+                _loopTimer?.Dispose();
             }
 
             if (duration > -1)
@@ -439,6 +440,7 @@ namespace DOF2DMD
             if (cleanbg)
             {
                 _queue.Enqueue(bg);
+                _loopTimer?.Dispose();
             }
             else
             {
@@ -584,6 +586,7 @@ namespace DOF2DMD
                     if (cleanbg)
                     {
                         _queue.RemoveAllScenes();
+                        _loopTimer?.Dispose();
                     }
 
                     // Create advanced scene
@@ -601,6 +604,7 @@ namespace DOF2DMD
                     if (cleanbg)
                     {
                         _queue.Enqueue(bg);
+                        _loopTimer?.Dispose();
                     }
                     else
                     {
@@ -775,7 +779,7 @@ namespace DOF2DMD
                     {
                         case "blank":
                             gGameMarquee = "";
-
+                            _loopTimer?.Dispose();
 
                             gDmdDevice.Post(() =>
                             {
