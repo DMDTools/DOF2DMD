@@ -63,6 +63,7 @@ namespace DOF2DMD
         public static string gGameMarquee = "DOF2DMD";
         private static Timer _scoreTimer;
         private static Timer _animationTimer;
+        private static Timer _loopTimer;
         private static readonly object _scoreQueueLock = new object();
         private static readonly object _animationQueueLock = new object();
         private static readonly object sceneLock = new object();
