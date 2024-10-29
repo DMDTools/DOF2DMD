@@ -794,6 +794,10 @@ namespace DOF2DMD
                             });
                             sReturn = "Marquee cleared";
                             break;
+                        case "loopstop":
+                            _loopTimer?.Dispose();
+                            sReturn = "Scroll text stopped";
+                            break;
                         case "exit":
                             Environment.Exit(0);
                             break;
