@@ -75,7 +75,7 @@ namespace DOF2DMD
         static void Main()
         {
             // Set up logging to a file
-            Trace.Listeners.Add(new TextWriterTraceListener("debug.log") { TraceOutputOptions = TraceOptions.Timestamp });
+            Trace.Listeners.Add(new TextWriterTraceListener("dof2dmd.log") { TraceOutputOptions = TraceOptions.Timestamp });
             Trace.AutoFlush = true;
 
             // Initializing DMD
@@ -288,9 +288,16 @@ namespace DOF2DMD
             {
                 if (string.IsNullOrEmpty(path))
                     return false;
-                if (!string.IsNullOrEmpty(AppSettings.artworkPath))
-                    path = AppSettings.artworkPath + "/" + path;
-                string localPath = HttpUtility.UrlDecode(path);
+                // Check if path is a full path or a relative path (use AppSettings.artworkPath if necessary)
+                string localPath;
+                if (Path.IsPathRooted(path))  // If the path is a full path (starts with a drive letter, e.g., G:/)
+                {
+                    localPath = HttpUtility.UrlDecode(Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path)));
+                }
+                else
+                {
+                    localPath = HttpUtility.UrlDecode(Path.Combine(AppSettings.artworkPath, path));  // Relative path
+                }
 
                 // List of possible extensions in order of priority
                 List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
@@ -298,6 +305,7 @@ namespace DOF2DMD
                 if (FileExistsWithExtensions(localPath, extensions, out string foundExtension))
                 {
                     string fullPath = localPath + foundExtension;
+                    string decodedFullPath = HttpUtility.UrlDecode(fullPath);
                     bool isVideo = new List<string> { ".gif", ".avi", ".mp4" }.Contains(foundExtension.ToLower());
                     bool isImage = new List<string> { ".png", ".jpg", ".bmp" }.Contains(foundExtension.ToLower());
 
@@ -721,11 +729,26 @@ namespace DOF2DMD
         /// <summary>
         /// Check if a file with extension exists
         /// </summary>
-        public static bool FileExistsWithExtensions(string fileNameWithoutExtension, List<string> extensions, out string foundExtension)
+        public static bool FileExistsWithExtensions(string filePath, List<string> extensions, out string foundExtension)
         {
+            // Get the current extension of the filePath (if it exists)
+            string currentExtension = Path.GetExtension(filePath).ToLower();
+
+            // If the file already has a valid extension, check if it exists directly
+            if (extensions.Contains(currentExtension))
+            {
+                if (File.Exists(filePath))
+                {
+                    foundExtension = currentExtension;
+                    return true;
+                }
+            }
+
+            // If no valid extension is provided, try appending valid extensions
+            string fileWithoutExtension = Path.Combine(Path.GetDirectoryName(filePath), Path.GetFileNameWithoutExtension(filePath));
             foreach (var extension in extensions)
             {
-                string fullPath = fileNameWithoutExtension + extension;
+                string fullPath = fileWithoutExtension + extension;
                 if (File.Exists(fullPath))
                 {
                     foundExtension = extension;
@@ -735,6 +758,7 @@ namespace DOF2DMD
             foundExtension = null;
             return false;
         }
+       
         /// <summary>
         /// Parses the animation names to correct values
         /// </summary>
