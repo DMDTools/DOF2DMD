@@ -572,8 +572,6 @@ namespace DOF2DMD
             }
         }
 
-
-
         /// <summary>
         /// Returns de correct pixel size for the font depending on the DMD size (256x64 or 128x32) and the letter based size.
         /// </summary>
