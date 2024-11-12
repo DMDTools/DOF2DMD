@@ -73,8 +73,8 @@ namespace DOF2DMD
         private static readonly object sceneLock = new object();
         private static Sequence _queue;
         private static readonly object attractTimerLock = new object();
-        private const int InactivityDelay = 30000; // 30 seconds in milliseconds
         private static string[] gGifFiles;
+        private static readonly Random _random = new Random();
 
 
         public static ScoreBoard _scoreBoard;
@@ -149,8 +149,8 @@ namespace DOF2DMD
             Trace.WriteLine($"DOF2DMD is now listening for requests on {AppSettings.UrlPrefix}...");
 
             // Initialize and start the attract timer
-            gGifFiles = Directory.GetFiles(AppSettings.artworkPath, "*.gif", SearchOption.AllDirectories);
-            _attractTimer = new Timer(AttractTimer, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+            gGifFiles = Directory.GetFiles(AppSettings.artworkAttractMode, "*.gif", SearchOption.AllDirectories);
+            _attractTimer = new Timer(AttractTimer, null, TimeSpan.FromSeconds(AppSettings.InactivityDelayS), TimeSpan.FromSeconds(1));
 
             Task listenTask = HandleIncomingConnections(listener);
             listenTask.GetAwaiter().GetResult();
@@ -163,11 +163,11 @@ namespace DOF2DMD
             {
                 if (_attractTimer == null)
                 {
-                    _attractTimer = new Timer(StartAttractMode, null, InactivityDelay, Timeout.Infinite);
+                    _attractTimer = new Timer(AttractTimer, null, TimeSpan.FromSeconds(AppSettings.InactivityDelayS), TimeSpan.FromSeconds(1));
                 }
                 else
                 {
-                    _attractTimer.Change(InactivityDelay, Timeout.Infinite);
+                    _attractTimer.Change(AppSettings.InactivityDelayS * 1000, 1000);
                 }
             }
         }
@@ -186,7 +186,6 @@ namespace DOF2DMD
         /// <param name="state"></param>
         private static void AttractTimer(object state)
         {
-            LogIt("⏱️ AttractTimer");
             AttractAction();
         }
 
@@ -212,23 +211,28 @@ namespace DOF2DMD
 
             if (_AttractModeAlternate)
             {
-                DisplayText(currentTime, "XL", "FFFFFF", "WhiteRabbit", "00FF00", "1", true, "None", 1, false);
+                // Display the current time in white text (FFFFFF) with green border  (00FF00) in XL size, and default font
+                DisplayText(currentTime, "XL", "FFFFFF", "", "00FF00", "1", true, "none", 1, false);
             }
 
         }
 
 
+        /// <summary>
+        /// Select a random Gif for attract mode
+        /// </summary>
         private static void SelectRandomGif()
         {
             if (gGifFiles.Length > 0)
             {
-                Random random = new Random();
-                int randomIndex = random.Next(gGifFiles.Length);
+                int randomIndex;
+                lock (_random) // Thread-safe access to Random
+                {
+                    randomIndex = _random.Next(gGifFiles.Length);
+                }
                 string fullPath = gGifFiles[randomIndex];
-                string parentFolder = Path.GetFileName(Path.GetDirectoryName(fullPath));
-                string fileName = Path.GetFileNameWithoutExtension(fullPath);
-                _currentAttractGif = Path.Combine(parentFolder, fileName);
-                Console.WriteLine($"Random GIF: {_currentAttractGif}");
+                string relativePath = Path.GetRelativePath(AppSettings.artworkPath, fullPath);
+                _currentAttractGif = Path.ChangeExtension(relativePath, null);
             }
             else
             {
@@ -303,6 +307,9 @@ namespace DOF2DMD
             public static ushort dmdWidth => ushort.Parse(_configuration["dmd_width"] ?? "128");
             public static ushort dmdHeight => ushort.Parse(_configuration["dmd_height"] ?? "32");
             public static string StartPicture => _configuration["start_picture"] ?? "DOF2DMD";
+            public static int InactivityDelayS => Int32.Parse(_configuration["inactivity_delay_s"] ?? "60");
+            public static string DefaultFont => _configuration["text_font"] ?? "Consolas";
+            public static string artworkAttractMode => _configuration["artwork_attract_mode"] ?? artworkPath;
         }
 
         /// <summary>
@@ -486,6 +493,17 @@ namespace DOF2DMD
         /// Displays text on the DMD device.
         /// %0A or | for line break
         /// </summary>
+        /// <param name="text">The text to display on the DMD</param>
+        /// <param name="size">Font size (will be converted based on device dimensions)</param>
+        /// <param name="color">Text color in hex format</param>
+        /// <param name="font">Font name to use (must exist in resources folder)</param>
+        /// <param name="bordercolor">Border color in hex format</param>
+        /// <param name="bordersize">Border size (0 for no border, 1 for border)</param>
+        /// <param name="cleanbg">If true, clears all existing scenes before displaying</param>
+        /// <param name="animation">Animation type for text display. Animation can be one of "none", "scrollright", "scrollleft", "scrolldown", "scrollup"</param>
+        /// <param name="duration">Duration in seconds (-1 for permanent display)</param>
+        /// <param name="loop">If true, loops the text display with 85% of duration as interval</param>
+        /// <returns>True if text was displayed successfully, false if an error occurred</returns>
         public static bool DisplayText(string text, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animation, float duration, bool loop)
         {
             try
@@ -503,8 +521,8 @@ namespace DOF2DMD
                 }
                 else
                 {
-                    localFontPath = $"resources/Consolas_{size}.fnt";
-                    LogIt($"Font not found, using default: {localFontPath}");
+                    localFontPath = $"resources/{AppSettings.DefaultFont}_{size}.fnt";
+                    //LogIt($"Font not found, using default: {localFontPath}");
                 }
 
                 // Determine if border is needed

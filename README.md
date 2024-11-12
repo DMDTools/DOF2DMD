@@ -71,6 +71,40 @@ uses [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
     DOFLinx, which in turn will trigger API calls to DOF2DMD.
 - Enjoy!
 
+## Attract Mode
+
+DOF2DMD includes an attract mode feature that displays a clock and random animations when the system is inactive. 
+
+### How it works
+- After a period of inactivity (default: 60 seconds), DOF2DMD will start cycling through random GIF animations from your artwork folder, and a clock
+- Each animation is displayed for 10 seconds before switching to the next one
+- Any API call will reset the inactivity timer, so that the attract mode will automatically stop when new content needs to be displayed
+
+### Configuration
+In `settings.ini`, you can customize the attract mode behavior:
+
+```ini
+; Delay in seconds before attract mode starts. Defaults to 60 (1 minute)
+inactivity_delay_s=60
+```
+
+### Artwork for Attract Mode
+
+- Place your GIF animations in the artwork folder or any subfolder
+- All GIF files in the artwork directory tree will be included in the random selection
+- Recommended: Create an "attract" subfolder in your artwork directory for dedicated attract mode animations, and set artwork_attract_mode in your ini file
+  
+  ```ini
+  ;Attract mode artwork folder. If not set, defaults to artwork_path
+  artwork_attract_mode=artwork/attract
+  ```
+
+### Tips
+
+- Use high-quality, looping GIF animations for the best attract mode experience
+- Consider creating themed collections in subfolders (e.g., artwork/attract/classics/, artwork/attract/modern/)
+- The attract mode is great for showcasing your cabinet when idle
+
 ## Artwork
 
 The images and animations must be in the `artwork` folder (by default in the DOF2DMD path under the `artwork` folder).
