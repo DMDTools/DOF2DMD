@@ -65,9 +65,9 @@ namespace DOF2DMD
         private static Timer _scoreTimer;
         private static Timer _animationTimer;
         private static Timer _attractTimer;
+        private static Timer _loopTimer;
         private static bool _AttractModeAlternate = true;
         private static string _currentAttractGif = null;
-        private static Timer _loopTimer;
         private static readonly object _scoreQueueLock = new object();
         private static readonly object _animationQueueLock = new object();
         private static readonly object sceneLock = new object();
@@ -158,7 +158,7 @@ namespace DOF2DMD
 
         private static void ResetAttractTimer()
         {
-            
+            LogIt("⏱️ Received a request - resetting AttractTimer");
             lock (attractTimerLock)
             {
                 if (_attractTimer == null)
@@ -193,8 +193,7 @@ namespace DOF2DMD
         private static void AttractAction()
         {
             DateTime now = DateTime.Now;
-            string currentTime = now.ToString("HH:mm:ss");
-
+            string currentTime = now.Second % 2 == 0 ? now.ToString("HH:mm") : now.ToString("HH mm");
             // Toggle the display mode every 10 seconds
             if (now.Second % 10 == 0)
             {
@@ -243,7 +242,7 @@ namespace DOF2DMD
         /// </summary>
         private static void AnimationTimer(object state)
         {
-            _animationTimer.Dispose();
+            _animationTimer?.Dispose();
             if (AppSettings.ScoreDmd != 0)
             {
                 LogIt("⏱️ AnimationTimer: now display score");
@@ -315,6 +314,7 @@ namespace DOF2DMD
             if (AppSettings.Debug)
             {
                 Trace.WriteLine(message);
+                Console.WriteLine(message);
             }
         }
         public static Boolean DisplayScore(int cPlayers, int player, int score, bool sCleanbg, int credits)
@@ -486,91 +486,92 @@ namespace DOF2DMD
         /// Displays text on the DMD device.
         /// %0A or | for line break
         /// </summary>
-      public static bool DisplayText(string text, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animation, float duration, bool loop)
-{
-    try
-    {
-        // Convert size to numeric value based on device dimensions
-        size = GetFontSize(size, gDmdDevice.Width, gDmdDevice.Height);
-
-        // Check if the font exists
-        string localFontPath = $"resources/{font}_{size}";
-        List<string> extensions = new List<string> { ".fnt", ".png" };
-
-        if (FileExistsWithExtensions(localFontPath, extensions, out string foundExtension))
+        public static bool DisplayText(string text, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animation, float duration, bool loop)
         {
-            localFontPath = localFontPath + ".fnt";
-        }
-        else
-        {
-            localFontPath = $"resources/Consolas_{size}.fnt";
-            LogIt($"Font not found, using default: {localFontPath}");
-        }
-
-        // Determine if border is needed
-        int border = bordersize != "0" ? 1 : 0;
-
-        System.Action displayAction = () =>
-        {
-            // Create font and label actor
-            FlexDMD.Font myFont = gDmdDevice.NewFont(localFontPath, HexToColor(color), HexToColor(bordercolor), border);
-            var labelActor = (Actor)gDmdDevice.NewLabel("MyLabel", myFont, text);
-
-            gDmdDevice.Graphics.Clear(Color.Black);
-            _scoreBoard.Visible = false;
-
-            var currentActor = new Actor();
-            if (cleanbg)
+            try
             {
-                _queue.RemoveAllScenes();
-                _loopTimer?.Dispose();
-            }
+                // Convert size to numeric value based on device dimensions
+                size = GetFontSize(size, gDmdDevice.Width, gDmdDevice.Height);
 
-            if (duration > -1)
-            {
-                _animationTimer?.Dispose();
-                _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
-            }
+                // Check if the font exists
+                string localFontPath = $"resources/{font}_{size}";
+                List<string> extensions = new List<string> { ".fnt", ".png" };
 
-            // Create background scene based on animation type
-            BackgroundScene bg = CreateTextBackgroundScene(animation.ToLower(), currentActor, text, myFont, duration);
+                if (FileExistsWithExtensions(localFontPath, extensions, out string foundExtension))
+                {
+                    localFontPath = localFontPath + ".fnt";
+                }
+                else
+                {
+                    localFontPath = $"resources/Consolas_{size}.fnt";
+                    LogIt($"Font not found, using default: {localFontPath}");
+                }
 
-            _queue.Visible = true;
+                // Determine if border is needed
+                int border = bordersize != "0" ? 1 : 0;
 
-            // Add scene to the queue or directly to the stage
-            if (cleanbg)
-            {
-                _queue.Enqueue(bg);
-                _loopTimer?.Dispose();
-            }
-            else
-            {
-                gDmdDevice.Stage.AddActor(bg);
-            }
-        };
+                System.Action displayAction = () =>
+                {
+                    // Create font and label actor
+                    FlexDMD.Font myFont = gDmdDevice.NewFont(localFontPath, HexToColor(color), HexToColor(bordercolor), border);
+                    var labelActor = (Actor)gDmdDevice.NewLabel("MyLabel", myFont, text);
 
-        // Ejecutar la acción inicial
-        displayAction();
+                    gDmdDevice.Graphics.Clear(Color.Black);
+                    _scoreBoard.Visible = false;
 
-        // Si loop es verdadero, configurar el temporizador
-        if (loop)
-        {
-            float waitDuration = duration * 0.85f; // 15% menos que la duración
-            _loopTimer = new Timer(_ => 
-            {
+                    var currentActor = new Actor();
+                    if (cleanbg)
+                    {
+                        _queue.RemoveAllScenes();
+                        _loopTimer?.Dispose();
+                    }
+
+                    if (duration > -1)
+                    {
+                        _animationTimer?.Dispose();
+                        _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+                    }
+
+                    // Create background scene based on animation type
+                    BackgroundScene bg = CreateTextBackgroundScene(animation.ToLower(), currentActor, text, myFont, duration);
+
+                    _queue.Visible = true;
+
+                    // Add scene to the queue or directly to the stage
+                    if (cleanbg)
+                    {
+                        _queue.Enqueue(bg);
+                        _loopTimer?.Dispose();
+                    }
+                    else
+                    {
+                        gDmdDevice.Stage.AddActor(bg);
+                    }
+                };
+
+                // Execute initial action
                 gDmdDevice.Post(displayAction);
-            }, null, (int)(waitDuration * 1000), (int)(waitDuration * 1000));
+
+                // If loop is true, configure the timer
+                if (loop)
+                {
+                    float waitDuration = duration * 0.85f; // 15% less than duration
+                    _loopTimer = new Timer(_ =>
+                    {
+                        gDmdDevice.Post(displayAction);
+                    }, null, (int)(waitDuration * 1000), (int)(waitDuration * 1000));
+                }
+
+                LogIt($"Rendering text: {text}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LogIt($"Error in DisplayText: {ex.Message}");
+                return false;
+            }
         }
 
-        LogIt($"Rendering text: {text}");
-        return true;
-    }
-    catch (Exception ex)
-    {
-        LogIt($"Error: {ex.Message}");
-        return false;
-    }
-}
 
 
         /// <summary>
