@@ -67,11 +67,11 @@ namespace DOF2DMD
         private static Timer _attractTimer;
         private static bool _AttractModeAlternate = true;
         private static string _currentAttractGif = null;
+        private static Timer _loopTimer;
         private static readonly object _scoreQueueLock = new object();
         private static readonly object _animationQueueLock = new object();
         private static readonly object sceneLock = new object();
         private static Sequence _queue;
-        private static Timer attractTimer;
         private static readonly object attractTimerLock = new object();
         private const int InactivityDelay = 30000; // 30 seconds in milliseconds
         private static string[] gGifFiles;
@@ -82,7 +82,7 @@ namespace DOF2DMD
         static void Main()
         {
             // Set up logging to a file
-            Trace.Listeners.Add(new TextWriterTraceListener("debug.log") { TraceOutputOptions = TraceOptions.Timestamp });
+            Trace.Listeners.Add(new TextWriterTraceListener("dof2dmd.log") { TraceOutputOptions = TraceOptions.Timestamp });
             Trace.AutoFlush = true;
 
             // Initializing DMD
@@ -111,14 +111,14 @@ namespace DOF2DMD
             {
                 _scoreFontText = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f6by12.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
                 _scoreFontNormal = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f7by13.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
-                _scoreFontHighlight = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f12by24.fnt", Color.White, Color.Black,1);
+                _scoreFontHighlight = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f12by24.fnt", Color.Orange, Color.Red, 1);
             }
             else
             {
             
-                _scoreFontText = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f4by5.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
-                _scoreFontNormal = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f5by7.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
-                _scoreFontHighlight = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f6by12.fnt", Color.White, Color.Black,1);    
+                _scoreFontText = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f6by12.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
+                _scoreFontNormal = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f7by13.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
+                _scoreFontHighlight = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f12by24.fnt", Color.Orange, Color.Red, 1);
             }
 
             _scoreBoard = new ScoreBoard(
@@ -158,15 +158,16 @@ namespace DOF2DMD
 
         private static void ResetAttractTimer()
         {
+            
             lock (attractTimerLock)
             {
-                if (attractTimer == null)
+                if (_attractTimer == null)
                 {
-                    attractTimer = new Timer(StartAttractMode, null, InactivityDelay, Timeout.Infinite);
+                    _attractTimer = new Timer(StartAttractMode, null, InactivityDelay, Timeout.Infinite);
                 }
                 else
                 {
-                    attractTimer.Change(InactivityDelay, Timeout.Infinite);
+                    _attractTimer.Change(InactivityDelay, Timeout.Infinite);
                 }
             }
         }
@@ -212,7 +213,7 @@ namespace DOF2DMD
 
             if (_AttractModeAlternate)
             {
-                DisplayText(currentTime, "XL", "FFFFFF", "WhiteRabbit", "00FF00", "1", true, "None", 1);
+                DisplayText(currentTime, "XL", "FFFFFF", "WhiteRabbit", "00FF00", "1", true, "None", 1, false);
             }
 
         }
@@ -248,7 +249,7 @@ namespace DOF2DMD
                 LogIt("⏱️ AnimationTimer: now display score");
                 if (gScore[gActivePlayer] > 0)
                 {
-                    DisplayScoreboard(gNbPlayers, gActivePlayer, gScore[1], gScore[2], gScore[3], gScore[4], $"Player {gActivePlayer}", $"Credits {gCredits}", true);
+                    DisplayScoreboard(gNbPlayers, gActivePlayer, gScore[1], gScore[2], gScore[3], gScore[4], "", "", true);
                 }
             }
         }
@@ -323,7 +324,7 @@ namespace DOF2DMD
             gNbPlayers = cPlayers;
             gCredits = credits;
             LogIt($"DisplayScore for player {player}: {score}");
-            DisplayScoreboard(gNbPlayers, player, gScore[1], gScore[2], gScore[3], gScore[4], $"PLAYER {gActivePlayer}", $"Credits {gCredits}", sCleanbg);
+            DisplayScoreboard(gNbPlayers, player, gScore[1], gScore[2], gScore[3], gScore[4], "", "", sCleanbg);
 
             if (AppSettings.ScoreDmd != 0)
             {
@@ -375,14 +376,20 @@ namespace DOF2DMD
         /// </summary>
         public static bool DisplayPicture(string path, float duration, string animation)
         {
-            LogIt($"📷 {path}, {duration}, {animation}");
             try
             {
                 if (string.IsNullOrEmpty(path))
                     return false;
-                if (!string.IsNullOrEmpty(AppSettings.artworkPath))
-                    path = AppSettings.artworkPath + "/" + path;
-                string localPath = HttpUtility.UrlDecode(path);
+                // Check if path is a full path or a relative path (use AppSettings.artworkPath if necessary)
+                string localPath;
+                if (Path.IsPathRooted(path))  // If the path is a full path (starts with a drive letter, e.g., G:/)
+                {
+                    localPath = HttpUtility.UrlDecode(Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path)));
+                }
+                else
+                {
+                    localPath = HttpUtility.UrlDecode(Path.Combine(AppSettings.artworkPath, path));  // Relative path
+                }
 
                 // List of possible extensions in order of priority
                 List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
@@ -390,6 +397,7 @@ namespace DOF2DMD
                 if (FileExistsWithExtensions(localPath, extensions, out string foundExtension))
                 {
                     string fullPath = localPath + foundExtension;
+                    string decodedFullPath = HttpUtility.UrlDecode(fullPath);
                     bool isVideo = new List<string> { ".gif", ".avi", ".mp4" }.Contains(foundExtension.ToLower());
                     bool isImage = new List<string> { ".png", ".jpg", ".bmp" }.Contains(foundExtension.ToLower());
 
@@ -437,7 +445,7 @@ namespace DOF2DMD
 
                         });
 
-                        LogIt($"Rendering {(isVideo ? "video" : "image")}: {fullPath}");
+                        LogIt($"📷Rendering {(isVideo ? "video" : "image")}: {fullPath}");
                         return true;
                     }
                     Trace.WriteLine($"File not found: {localPath}");
@@ -478,76 +486,93 @@ namespace DOF2DMD
         /// Displays text on the DMD device.
         /// %0A or | for line break
         /// </summary>
-        public static bool DisplayText(string text, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animation, float duration)
+      public static bool DisplayText(string text, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animation, float duration, bool loop)
+{
+    try
+    {
+        // Convert size to numeric value based on device dimensions
+        size = GetFontSize(size, gDmdDevice.Width, gDmdDevice.Height);
+
+        // Check if the font exists
+        string localFontPath = $"resources/{font}_{size}";
+        List<string> extensions = new List<string> { ".fnt", ".png" };
+
+        if (FileExistsWithExtensions(localFontPath, extensions, out string foundExtension))
         {
-            try
-            {
-                // Convert size to numeric value based on device dimensions
-                size = GetFontSize(size, gDmdDevice.Width, gDmdDevice.Height);
-
-                //Check if the font exists
-                string localFontPath = $"resources/{font}_{size}";
-                List<string> extensions = new List<string> { ".fnt", ".png" };
-
-                if (FileExistsWithExtensions(localFontPath, extensions, out string foundExtension))
-                {
-                    localFontPath = localFontPath + ".fnt";
-                }
-                else
-                {
-                    localFontPath = $"resources/Consolas_{size}.fnt";
-                    LogIt($"Font not found, using default: {localFontPath}");
-                }
-
-                
-                // Determine if border is needed
-                int border = bordersize != "0" ? 1 : 0;
-
-                
-                gDmdDevice.Post(() =>
-                {
-                    // Create font and label actor
-                    FlexDMD.Font myFont = gDmdDevice.NewFont(localFontPath, HexToColor(color), HexToColor(bordercolor), border);
-                    var labelActor = (Actor)gDmdDevice.NewLabel("MyLabel", myFont, text);
-                    
-                    gDmdDevice.Graphics.Clear(Color.Black);
-                     _scoreBoard.Visible = false;
-                    
-                    var currentActor = new Actor();
-                    if (cleanbg)
-                    {
-                        _queue.RemoveAllScenes();
-                    }
-                    if (duration > -1)
-                            {
-                                _animationTimer?.Dispose();
-                                _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
-                            }
-                    // Create background scene based on animation type
-                    
-                    BackgroundScene bg = CreateTextBackgroundScene(animation.ToLower(), currentActor, text, myFont, duration);
-
-                    _queue.Visible = true;
-
-                    // Add scene to the queue or directly to the stage
-                    if (cleanbg)
-                    {
-                        _queue.Enqueue(bg);
-                    }
-                    else
-                    {
-                        gDmdDevice.Stage.AddActor(bg);
-                    }
-                });
-
-                LogIt($"Rendering text: {text}");
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
+            localFontPath = localFontPath + ".fnt";
         }
+        else
+        {
+            localFontPath = $"resources/Consolas_{size}.fnt";
+            LogIt($"Font not found, using default: {localFontPath}");
+        }
+
+        // Determine if border is needed
+        int border = bordersize != "0" ? 1 : 0;
+
+        System.Action displayAction = () =>
+        {
+            // Create font and label actor
+            FlexDMD.Font myFont = gDmdDevice.NewFont(localFontPath, HexToColor(color), HexToColor(bordercolor), border);
+            var labelActor = (Actor)gDmdDevice.NewLabel("MyLabel", myFont, text);
+
+            gDmdDevice.Graphics.Clear(Color.Black);
+            _scoreBoard.Visible = false;
+
+            var currentActor = new Actor();
+            if (cleanbg)
+            {
+                _queue.RemoveAllScenes();
+                _loopTimer?.Dispose();
+            }
+
+            if (duration > -1)
+            {
+                _animationTimer?.Dispose();
+                _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+            }
+
+            // Create background scene based on animation type
+            BackgroundScene bg = CreateTextBackgroundScene(animation.ToLower(), currentActor, text, myFont, duration);
+
+            _queue.Visible = true;
+
+            // Add scene to the queue or directly to the stage
+            if (cleanbg)
+            {
+                _queue.Enqueue(bg);
+                _loopTimer?.Dispose();
+            }
+            else
+            {
+                gDmdDevice.Stage.AddActor(bg);
+            }
+        };
+
+        // Ejecutar la acción inicial
+        displayAction();
+
+        // Si loop es verdadero, configurar el temporizador
+        if (loop)
+        {
+            float waitDuration = duration * 0.85f; // 15% menos que la duración
+            _loopTimer = new Timer(_ => 
+            {
+                gDmdDevice.Post(displayAction);
+            }, null, (int)(waitDuration * 1000), (int)(waitDuration * 1000));
+        }
+
+        LogIt($"Rendering text: {text}");
+        return true;
+    }
+    catch (Exception ex)
+    {
+        LogIt($"Error: {ex.Message}");
+        return false;
+    }
+}
+
+
         /// <summary>
         /// Returns de correct pixel size for the font depending on the DMD size (256x64 or 128x32) and the letter based size.
         /// </summary>
@@ -662,6 +687,7 @@ namespace DOF2DMD
                     if (cleanbg)
                     {
                         _queue.RemoveAllScenes();
+                        _loopTimer?.Dispose();
                     }
 
                     // Create advanced scene
@@ -679,6 +705,7 @@ namespace DOF2DMD
                     if (cleanbg)
                     {
                         _queue.Enqueue(bg);
+                        _loopTimer?.Dispose();
                     }
                     else
                     {
@@ -795,11 +822,26 @@ namespace DOF2DMD
         /// <summary>
         /// Check if a file with extension exists
         /// </summary>
-        public static bool FileExistsWithExtensions(string fileNameWithoutExtension, List<string> extensions, out string foundExtension)
+        public static bool FileExistsWithExtensions(string filePath, List<string> extensions, out string foundExtension)
         {
+            // Get the current extension of the filePath (if it exists)
+            string currentExtension = Path.GetExtension(filePath).ToLower();
+
+            // If the file already has a valid extension, check if it exists directly
+            if (extensions.Contains(currentExtension))
+            {
+                if (File.Exists(filePath))
+                {
+                    foundExtension = currentExtension;
+                    return true;
+                }
+            }
+
+            // If no valid extension is provided, try appending valid extensions
+            string fileWithoutExtension = Path.Combine(Path.GetDirectoryName(filePath), Path.GetFileNameWithoutExtension(filePath));
             foreach (var extension in extensions)
             {
-                string fullPath = fileNameWithoutExtension + extension;
+                string fullPath = fileWithoutExtension + extension;
                 if (File.Exists(fullPath))
                 {
                     foundExtension = extension;
@@ -809,6 +851,7 @@ namespace DOF2DMD
             foundExtension = null;
             return false;
         }
+       
         /// <summary>
         /// Parses the animation names to correct values
         /// </summary>
@@ -856,7 +899,7 @@ namespace DOF2DMD
                     {
                         case "blank":
                             gGameMarquee = "";
-
+                            _loopTimer?.Dispose();
 
                             gDmdDevice.Post(() =>
                             {
@@ -870,6 +913,10 @@ namespace DOF2DMD
                                 if (_queue.IsFinished()) _queue.Visible = false;
                             });
                             sReturn = "Marquee cleared";
+                            break;
+                        case "loopstop":
+                            _loopTimer?.Dispose();
+                            sReturn = "Scroll text stopped";
                             break;
                         case "exit":
                             Environment.Exit(0);
@@ -886,7 +933,6 @@ namespace DOF2DMD
                                     string pFixed = query.Get("fixed") ?? "false";
                                     float pictureduration = float.TryParse(query.Get("duration"), out float result) ? result : 0.0f;
                                     string pictureanimation = query.Get("animation") ?? "none";
-                                    LogIt($"Query {query.Count}, Picture is now set to: {picturepath} with animation {pictureanimation} with a duration of {pictureduration} seconds");
                                     if (StringComparer.OrdinalIgnoreCase.Compare(pFixed, "true") == 0)
                                     {
                                         pictureduration = -1.0f;
@@ -926,9 +972,14 @@ namespace DOF2DMD
                                     if (!bool.TryParse(query.Get("cleanbg"), out cleanbg))
                                     {
                                         cleanbg = true; // valor predeterminado si la conversión falla
+                                    } 
+                                    bool loop;
+                                    if (!bool.TryParse(query.Get("loop"), out loop))
+                                    {
+                                        loop = false; // valor predeterminado si la conversión falla
                                     }
 
-                                    if (DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration))
+                                    if (DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop))
                                     {
                                         sReturn = "OK";
                                     }
@@ -1285,7 +1336,7 @@ namespace DOF2DMD
 
             _container.Y = (Height - _container.Height) / 2;
             _container.X = Width;
-            _tweener.Tween(_container, new { X = -Width }, _length, 0f);
+            _tweener.Tween(_container, new { X = -(Width + Width*.1) }, _length, 0f);
         }
 
         public override void Update(float delta)
@@ -1296,7 +1347,7 @@ namespace DOF2DMD
                 _container.Width = Width;
                 foreach (Actor line in _container.Children)
                 {
-                    line.X = (Width - line.Width) /2;
+                    line.X = (Width - line.Width)/2;
                 }
             }
         }
@@ -1336,7 +1387,7 @@ namespace DOF2DMD
             base.Begin();
             _container.Y = (Height - _container.Height) / 2;
             _container.X = -Width;
-            _tweener.Tween(_container, new { X = Width }, _length, 0f);
+            _tweener.Tween(_container, new { X = Width + Width * .1 }, _length, 0f);
         }
 
         public override void Update(float delta)
