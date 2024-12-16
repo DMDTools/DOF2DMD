@@ -65,6 +65,7 @@ namespace DOF2DMD
         private static Timer _scoreTimer;
         private static Timer _animationTimer;
         private static Timer _attractTimer;
+        private static Timer _attractChangeTimer;
         private static Timer _loopTimer;
         private static bool _AttractModeAlternate = true;
         private static string _currentAttractGif = null;
@@ -159,6 +160,8 @@ namespace DOF2DMD
         private static void ResetAttractTimer()
         {
             LogIt("⏱️ Received a request - resetting AttractTimer");
+            _attractChangeTimer?.Dispose();
+            _attractChangeTimer = null;
             lock (attractTimerLock)
             {
                 if (_attractTimer == null)
@@ -172,47 +175,52 @@ namespace DOF2DMD
             }
         }
 
-        private static void StartAttractMode(object state)
-        {
-            // Your existing attract mode logic goes here
-            SelectRandomGif();
-            // Add any other attract mode initialization code
-        }
-
-
         /// <summary>
         /// 
         /// </summary>
         /// <param name="state"></param>
         private static void AttractTimer(object state)
         {
+            // By default, arm timer so attract display is changed in 10 seconds
+            // The _attractChangeTimer will be changed to expire after a video is fully displayed
+            if (_attractChangeTimer == null)
+            {
+                LogIt($"Setting next AttractChange in 10 seconds");
+                _attractChangeTimer = new Timer(AttractChange, null, 10 * 1000, Timeout.Infinite);
+            }
             AttractAction();
+        }
+
+        private static void AttractChange(object state)
+        {
+            LogIt("AttractChange expired - changing AttractMode");
+            _AttractModeAlternate = !_AttractModeAlternate;
+            // By default, arm timer so attract display is changed in 10 seconds
+            // The _attractChangeTimer will be changed to expire after a video is fully displayed
+            _attractChangeTimer?.Dispose();
+            LogIt($"Setting next AttractChange in 10 seconds");
+            _attractChangeTimer = new Timer(AttractChange, null, 10 * 1000, Timeout.Infinite);
+            // If switching to GIF mode, select a new random GIF
+            if (!_AttractModeAlternate)
+            {
+                SelectRandomGif();
+                if (_currentAttractGif != null)
+                {
+                    DisplayPicture(_currentAttractGif, 0, "none");
+                }
+            }
         }
 
         private static void AttractAction()
         {
             DateTime now = DateTime.Now;
             string currentTime = now.Second % 2 == 0 ? now.ToString("HH:mm") : now.ToString("HH mm");
-            // Toggle the display mode every 10 seconds
-            if (now.Second % 10 == 0)
-            {
-                _AttractModeAlternate = !_AttractModeAlternate;
-
-                // If switching to GIF mode, select a new random GIF
-                if (!_AttractModeAlternate)
-                {
-                    SelectRandomGif();
-                    if (_currentAttractGif != null)
-                    {
-                        DisplayPicture(_currentAttractGif, -1, "none");
-                    }
-                }
-            }
 
             if (_AttractModeAlternate)
             {
                 // Display the current time in white text (FFFFFF) with green border  (00FF00) in XL size, and default font
-                DisplayText(currentTime, "XL", "FFFFFF", "", "00FF00", "1", true, "none", 1, false);
+                //DisplayText(currentTime, "XL", "FFFFFF", "", "00FF00", "1", true, "none", 1, false);*
+                DisplayText(currentTime, "XL", "FFFFFF", "", "FFFFFF", "0", true, "none", 1, false);
             }
 
         }
@@ -249,9 +257,9 @@ namespace DOF2DMD
             _animationTimer?.Dispose();
             if (AppSettings.ScoreDmd != 0)
             {
-                LogIt("⏱️ AnimationTimer: now display score");
                 if (gScore[gActivePlayer] > 0)
                 {
+                    LogIt("AnimationTimer: now display score");
                     DisplayScoreboard(gNbPlayers, gActivePlayer, gScore[1], gScore[2], gScore[3], gScore[4], "", "", true);
                 }
             }
@@ -414,7 +422,6 @@ namespace DOF2DMD
                         {
                             gDmdDevice.Clear = true;
 
-
                             // Liberar recursos existentes
                             if (_queue.ChildCount >= 1)
                             {
@@ -439,6 +446,9 @@ namespace DOF2DMD
                                     // Arm timer to restore to score, once animation is done playing
                                     _animationTimer?.Dispose();
                                     _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+                                    _attractChangeTimer?.Dispose();
+                                    LogIt($"Setting next AttractChange in {duration} seconds (video duration)");
+                                    _attractChangeTimer = new Timer(AttractChange, null, (int)duration * 1000, Timeout.Infinite);
                                 }
                             }
 
@@ -544,11 +554,11 @@ namespace DOF2DMD
                         _loopTimer?.Dispose();
                     }
 
-                    if (duration > -1)
-                    {
-                        _animationTimer?.Dispose();
-                        _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
-                    }
+                    // if (duration > -1)
+                    // {
+                    //     _animationTimer?.Dispose();
+                    //     _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+                    // }
 
                     // Create background scene based on animation type
                     BackgroundScene bg = CreateTextBackgroundScene(animation.ToLower(), currentActor, text, myFont, duration);
