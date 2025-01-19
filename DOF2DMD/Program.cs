@@ -49,6 +49,7 @@ using System.Globalization;
 using static System.Net.Mime.MediaTypeNames;
 using FlexDMD.Properties;
 using System.Collections;
+using System.Linq;
 
 
 namespace DOF2DMD
@@ -63,22 +64,63 @@ namespace DOF2DMD
         public static string gGameMarquee = "DOF2DMD";
         private static Timer _scoreTimer;
         private static Timer _animationTimer;
+        private static Timer _attractTimer;
+        private static Timer _attractChangeTimer;
         private static Timer _loopTimer;
+        private static bool _AttractModeAlternate = true;
+        private static string _currentAttractGif = null;
         private static readonly object _scoreQueueLock = new object();
         private static readonly object _animationQueueLock = new object();
         private static readonly object sceneLock = new object();
         private static Sequence _queue;
+        private static readonly object attractTimerLock = new object();
+        private static string[] gGifFiles;
+        private static readonly Random _random = new Random();
 
 
         public static ScoreBoard _scoreBoard;
 
-        static void Main()
+        static async Task Main()
         {
             // Set up logging to a file
             Trace.Listeners.Add(new TextWriterTraceListener("dof2dmd.log") { TraceOutputOptions = TraceOptions.Timestamp });
+            Trace.Listeners.Add(new ConsoleTraceListener());
             Trace.AutoFlush = true;
 
-            // Initializing DMD
+            LogIt("Starting DOF2DMD...");
+            // Start the http listener first
+            LogIt("Starting HTTP listener");
+            HttpListener listener = new HttpListener();
+            listener.Prefixes.Add($"{AppSettings.UrlPrefix}/");
+            listener.Start();
+            LogIt($"DOF2DMD is now listening for requests on {AppSettings.UrlPrefix}...");
+
+            // Initialize DMD in parallel
+            LogIt("Starting DMD initialization");
+            var dmdInitTask = Task.Run(() => InitializeDMD());
+
+            // Start handling HTTP connections
+            LogIt("Starting HTTP connection handler");
+            var listenTask = HandleIncomingConnections(listener);
+
+            // Initialize and start the attract timer
+            gGifFiles = Directory.GetFiles(AppSettings.artworkAttractMode, "*.gif", SearchOption.AllDirectories);
+            _attractTimer = new Timer(AttractTimer, null, TimeSpan.FromSeconds(AppSettings.InactivityDelayS), TimeSpan.FromSeconds(1));
+
+            // Wait for DMD initialization to complete
+            LogIt("Waiting for DMD initialization to complete");
+            await dmdInitTask;
+
+            // Wait for the HTTP listener
+            LogIt("DOF2DMD now fully initialized!");
+            await listenTask;
+        }
+
+        private static void InitializeDMD()
+        {
+            var grayColor = Color.FromArgb(168, 168, 168);
+
+            // Initialize DMD device with configuration
             gDmdDevice = new FlexDMD.FlexDMD
             {
                 Width = AppSettings.dmdWidth,
@@ -90,73 +132,152 @@ namespace DOF2DMD
                 Run = true
             };
 
-            _queue = new Sequence(gDmdDevice);
-            _queue.FillParent = true;
+            // Initialize sequence
+            _queue = new Sequence(gDmdDevice) { FillParent = true };
 
-            //DMDScene = (Group)gDmdDevice.NewGroup("Scene");
+            // Initialize fonts
+            var fonts = InitializeFonts(gDmdDevice, grayColor);
 
-            FlexDMD.Font _scoreFontText;
-            FlexDMD.Font _scoreFontNormal;
-            FlexDMD.Font _scoreFontHighlight;
-
-            // UltraDMD uses f4by5 / f5by7 / f6by12
-            if(gDmdDevice.Height == 64 && gDmdDevice.Width == 256)
-            {
-                _scoreFontText = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f6by12.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
-                _scoreFontNormal = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f7by13.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
-                _scoreFontHighlight = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f12by24.fnt", Color.Orange, Color.Red, 1);
-            }
-            else
-            {
-            
-                _scoreFontText = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f6by12.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
-                _scoreFontNormal = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f7by13.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
-                _scoreFontHighlight = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f12by24.fnt", Color.Orange, Color.Red, 1);
-            }
-
+            // Initialize scoreboard
             _scoreBoard = new ScoreBoard(
                 gDmdDevice,
-                _scoreFontNormal,
-                _scoreFontHighlight,
-                _scoreFontText
-                )
+                fonts.NormalFont,
+                fonts.HighlightFont,
+                fonts.TextFont
+            )
             { Visible = false };
 
-            
-
+            // Add actors to stage
             gDmdDevice.Stage.AddActor(_queue);
             gDmdDevice.Stage.AddActor(_scoreBoard);
 
-            // Display start picture as game marquee
+            // Set and display game marquee
             gGameMarquee = AppSettings.StartPicture;
-
-            Thread.Sleep(500);
             DisplayPicture(gGameMarquee, -1, "none");
-
-
-            // Start the http listener
-            HttpListener listener = new HttpListener();
-            listener.Prefixes.Add($"{AppSettings.UrlPrefix}/");
-            listener.Start();
-
-            Trace.WriteLine($"DOF2DMD is now listening for requests on {AppSettings.UrlPrefix}...");
-
-            Task listenTask = HandleIncomingConnections(listener);
-            listenTask.GetAwaiter().GetResult();
         }
-        
+
+        private static (FlexDMD.Font TextFont, FlexDMD.Font NormalFont, FlexDMD.Font HighlightFont) InitializeFonts(
+            FlexDMD.FlexDMD device, Color grayColor)
+        {
+            // Font configurations
+            var fontConfig = new[]
+            {
+                new { Path = "FlexDMD.Resources.udmd-f6by12.fnt", ForeColor = grayColor },
+                new { Path = "FlexDMD.Resources.udmd-f7by13.fnt", ForeColor = grayColor },
+                new { Path = "FlexDMD.Resources.udmd-f12by24.fnt", ForeColor = Color.Orange }
+            };
+
+            return (
+                TextFont: device.NewFont(fontConfig[0].Path, fontConfig[0].ForeColor, Color.Black, 1),
+                NormalFont: device.NewFont(fontConfig[1].Path, fontConfig[1].ForeColor, Color.Black, 1),
+                HighlightFont: device.NewFont(fontConfig[2].Path, fontConfig[2].ForeColor, Color.Red, 1)
+            );
+        }
+
+        private static void ResetAttractTimer()
+        {
+            LogIt("⏱️ Received a request - resetting AttractTimer");
+            _attractChangeTimer?.Dispose();
+            _attractChangeTimer = null;
+            lock (attractTimerLock)
+            {
+                if (_attractTimer == null)
+                {
+                    _attractTimer = new Timer(AttractTimer, null, TimeSpan.FromSeconds(AppSettings.InactivityDelayS), TimeSpan.FromSeconds(1));
+                }
+                else
+                {
+                    _attractTimer.Change(AppSettings.InactivityDelayS * 1000, 1000);
+                }
+            }
+        }
+
         /// <summary>
-         /// Callback method once animation is finished.
-         /// Displays the player's score
-         /// </summary>
+        /// 
+        /// </summary>
+        /// <param name="state"></param>
+        private static void AttractTimer(object state)
+        {
+            // By default, arm timer so attract display is changed in 10 seconds
+            // The _attractChangeTimer will be changed to expire after a video is fully displayed
+            if (_attractChangeTimer == null)
+            {
+                LogIt($"Setting next AttractChange in 10 seconds");
+                _attractChangeTimer = new Timer(AttractChange, null, 10 * 1000, Timeout.Infinite);
+            }
+            AttractAction();
+        }
+
+        private static void AttractChange(object state)
+        {
+            LogIt("AttractChange expired - changing AttractMode");
+            _AttractModeAlternate = !_AttractModeAlternate;
+            // By default, arm timer so attract display is changed in 10 seconds
+            // The _attractChangeTimer will be changed to expire after a video is fully displayed
+            _attractChangeTimer?.Dispose();
+            LogIt($"Setting next AttractChange in 10 seconds");
+            _attractChangeTimer = new Timer(AttractChange, null, 10 * 1000, Timeout.Infinite);
+            // If switching to GIF mode, select a new random GIF
+            if (!_AttractModeAlternate)
+            {
+                SelectRandomGif();
+                if (_currentAttractGif != null)
+                {
+                    DisplayPicture(_currentAttractGif, 0, "none");
+                }
+            }
+        }
+
+        private static void AttractAction()
+        {
+            DateTime now = DateTime.Now;
+            string currentTime = now.Second % 2 == 0 ? now.ToString("HH:mm") : now.ToString("HH mm");
+
+            if (_AttractModeAlternate)
+            {
+                // Display the current time in white text (FFFFFF) with green border  (00FF00) in XL size, and default font
+                //DisplayText(currentTime, "XL", "FFFFFF", "", "00FF00", "1", true, "none", 1, false);*
+                DisplayText(currentTime, "XL", "FFFFFF", "", "FFFFFF", "0", true, "none", 1, false);
+            }
+
+        }
+
+
+        /// <summary>
+        /// Select a random Gif for attract mode
+        /// </summary>
+        private static void SelectRandomGif()
+        {
+            if (gGifFiles.Length > 0)
+            {
+                int randomIndex;
+                lock (_random) // Thread-safe access to Random
+                {
+                    randomIndex = _random.Next(gGifFiles.Length);
+                }
+                string fullPath = gGifFiles[randomIndex];
+                string relativePath = Path.GetRelativePath(AppSettings.artworkPath, fullPath);
+                _currentAttractGif = Path.ChangeExtension(relativePath, null);
+            }
+            else
+            {
+                _currentAttractGif = null;
+            }
+        }
+
+        /// <summary>
+        /// <summary>
+        /// Callback method once animation is finished.
+        /// Displays the player's score
+        /// </summary>
         private static void AnimationTimer(object state)
         {
-            _animationTimer.Dispose();
+            _animationTimer?.Dispose();
             if (AppSettings.ScoreDmd != 0)
             {
-                LogIt("⏱️ AnimationTimer: now display score");
                 if (gScore[gActivePlayer] > 0)
                 {
+                    LogIt("AnimationTimer: now display score");
                     DisplayScoreboard(gNbPlayers, gActivePlayer, gScore[1], gScore[2], gScore[3], gScore[4], "", "", true);
                 }
             }
@@ -212,6 +333,9 @@ namespace DOF2DMD
             public static ushort dmdWidth => ushort.Parse(_configuration["dmd_width"] ?? "128");
             public static ushort dmdHeight => ushort.Parse(_configuration["dmd_height"] ?? "32");
             public static string StartPicture => _configuration["start_picture"] ?? "DOF2DMD";
+            public static int InactivityDelayS => Int32.Parse(_configuration["inactivity_delay_s"] ?? "60");
+            public static string DefaultFont => _configuration["text_font"] ?? "Consolas";
+            public static string artworkAttractMode => _configuration["artwork_attract_mode"] ?? artworkPath;
         }
 
         /// <summary>
@@ -222,7 +346,7 @@ namespace DOF2DMD
             // If debug is enabled
             if (AppSettings.Debug)
             {
-                Trace.WriteLine(message);
+                Trace.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {message}");
             }
         }
         public static Boolean DisplayScore(int cPlayers, int player, int score, bool sCleanbg, int credits)
@@ -275,7 +399,7 @@ namespace DOF2DMD
             }
             catch (Exception ex)
             {
-                Trace.WriteLine($"  Error occurred while genering the Score Board. {ex.Message}");
+                LogIt($"  Error occurred while genering the Score Board. {ex.Message}");
                 return false;
             }
         }
@@ -288,6 +412,22 @@ namespace DOF2DMD
             {
                 if (string.IsNullOrEmpty(path))
                     return false;
+
+                // Retry if gDmdDevice is null
+                int retries = 10;
+                while (gDmdDevice == null && retries > 0)
+                {
+                    Thread.Sleep(1000);
+                    LogIt($"Retrying DMD device initialization {retries} retries left");
+                    retries--;
+                }
+
+                if (gDmdDevice == null)
+                {
+                    LogIt("DMD device initialization failed 10 retries");
+                    return false;
+                }
+
                 // Check if path is a full path or a relative path (use AppSettings.artworkPath if necessary)
                 string localPath;
                 if (Path.IsPathRooted(path))  // If the path is a full path (starts with a drive letter, e.g., G:/)
@@ -315,7 +455,6 @@ namespace DOF2DMD
                         {
                             gDmdDevice.Clear = true;
 
-
                             // Liberar recursos existentes
                             if (_queue.ChildCount >= 1)
                             {
@@ -340,6 +479,9 @@ namespace DOF2DMD
                                     // Arm timer to restore to score, once animation is done playing
                                     _animationTimer?.Dispose();
                                     _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+                                    _attractChangeTimer?.Dispose();
+                                    LogIt($"Setting next AttractChange in {duration} seconds (video duration)");
+                                    _attractChangeTimer = new Timer(AttractChange, null, (int)duration * 1000, Timeout.Infinite);
                                 }
                             }
 
@@ -356,6 +498,7 @@ namespace DOF2DMD
                         LogIt($"📷Rendering {(isVideo ? "video" : "image")}: {fullPath}");
                         return true;
                     }
+                    Trace.WriteLine($"File not found: {localPath}");
 
                     return false;
                 }
@@ -364,7 +507,7 @@ namespace DOF2DMD
             }
             catch (Exception ex)
             {
-                Trace.WriteLine($"Error occurred while fetching the image. {ex.Message}");
+                LogIt($"Error occurred while fetching the image. {ex.Message}");
                 return false;
             }
 
@@ -393,6 +536,17 @@ namespace DOF2DMD
         /// Displays text on the DMD device.
         /// %0A or | for line break
         /// </summary>
+        /// <param name="text">The text to display on the DMD</param>
+        /// <param name="size">Font size (will be converted based on device dimensions)</param>
+        /// <param name="color">Text color in hex format</param>
+        /// <param name="font">Font name to use (must exist in resources folder)</param>
+        /// <param name="bordercolor">Border color in hex format</param>
+        /// <param name="bordersize">Border size (0 for no border, 1 for border)</param>
+        /// <param name="cleanbg">If true, clears all existing scenes before displaying</param>
+        /// <param name="animation">Animation type for text display. Animation can be one of "none", "scrollright", "scrollleft", "scrolldown", "scrollup"</param>
+        /// <param name="duration">Duration in seconds (-1 for permanent display)</param>
+        /// <param name="loop">If true, loops the text display with 85% of duration as interval</param>
+        /// <returns>True if text was displayed successfully, false if an error occurred</returns>
         public static bool DisplayText(string text, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animation, float duration, bool loop)
         {
             try
@@ -410,8 +564,8 @@ namespace DOF2DMD
                 }
                 else
                 {
-                    localFontPath = $"resources/Consolas_{size}.fnt";
-                    LogIt($"Font not found, using default: {localFontPath}");
+                    localFontPath = $"resources/{AppSettings.DefaultFont}_{size}.fnt";
+                    //LogIt($"Font not found, using default: {localFontPath}");
                 }
 
                 // Determine if border is needed
@@ -433,11 +587,11 @@ namespace DOF2DMD
                         _loopTimer?.Dispose();
                     }
 
-                    if (duration > -1)
-                    {
-                        _animationTimer?.Dispose();
-                        _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
-                    }
+                    // if (duration > -1)
+                    // {
+                    //     _animationTimer?.Dispose();
+                    //     _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+                    // }
 
                     // Create background scene based on animation type
                     BackgroundScene bg = CreateTextBackgroundScene(animation.ToLower(), currentActor, text, myFont, duration);
@@ -794,6 +948,9 @@ namespace DOF2DMD
             string sReturn = "OK";
 
             string[] urlParts = newUrl.AbsolutePath.Split('/');
+
+            // Reset attract timer
+            ResetAttractTimer();
 
             switch (urlParts[1])
             {

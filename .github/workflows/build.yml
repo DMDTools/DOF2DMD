@@ -49,27 +49,27 @@ jobs:
         run: |
           copy FlexDMD.dll dof2dmd
           copy DmdDevice64.dll dof2dmd
-          dotnet publish -r win-x64 --self-contained=false /p:PublishSingleFile=true dof2dmd/dof2dmd.csproj /p:Version=${{ github.ref_name }}
+          dotnet publish /p:Version=${{ github.ref_name }}
 
       - if: "!startsWith(github.ref, 'refs/tags/')"
         name: Build
         run: |
           copy FlexDMD.dll dof2dmd
           copy DmdDevice64.dll dof2dmd
-          dotnet publish -r win-x64 --self-contained=false /p:PublishSingleFile=true dof2dmd/dof2dmd.csproj
+          dotnet publish
 
       # Upload artifacts
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: DOF2DMD
-          path: .\DOF2DMD\bin\Release\net8.0-windows\win-x64\publish
+          path: .\DOF2DMD\bin\Release\net8.0-windows\publish
           retention-days: 7
 
       - name: Generate zip bundle
         run: |
           # tree /f
-          7z a -tzip DOF2DMD.zip .\DOF2DMD\bin\Release\net8.0-windows\win-x64\publish\*
+          7z a -tzip DOF2DMD.zip .\DOF2DMD\bin\Release\net8.0-windows\publish\*
       
       - if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
         name: Publish latest pre-release
