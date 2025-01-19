@@ -72,13 +72,43 @@ namespace DOF2DMD
 
         public static ScoreBoard _scoreBoard;
 
-        static void Main()
+        static async Task Main()
         {
             // Set up logging to a file
             Trace.Listeners.Add(new TextWriterTraceListener("dof2dmd.log") { TraceOutputOptions = TraceOptions.Timestamp });
+            Trace.Listeners.Add(new ConsoleTraceListener());
             Trace.AutoFlush = true;
 
-            // Initializing DMD
+            LogIt("Starting DOF2DMD...");
+            // Start the http listener first
+            LogIt("Starting HTTP listener");
+            HttpListener listener = new HttpListener();
+            listener.Prefixes.Add($"{AppSettings.UrlPrefix}/");
+            listener.Start();
+            LogIt($"DOF2DMD is now listening for requests on {AppSettings.UrlPrefix}...");
+
+            // Initialize DMD in parallel
+            LogIt("Starting DMD initialization");
+            var dmdInitTask = Task.Run(() => InitializeDMD());
+
+            // Start handling HTTP connections
+            LogIt("Starting HTTP connection handler");
+            var listenTask = HandleIncomingConnections(listener);
+
+            // Wait for DMD initialization to complete
+            LogIt("Waiting for DMD initialization to complete");
+            await dmdInitTask;
+
+            // Wait for the HTTP listener
+            LogIt("DOF2DMD now fully initialized!");
+            await listenTask;
+        }
+
+        private static void InitializeDMD()
+        {
+            var grayColor = Color.FromArgb(168, 168, 168);
+
+            // Initialize DMD device with configuration
             gDmdDevice = new FlexDMD.FlexDMD
             {
                 Width = AppSettings.dmdWidth,
@@ -90,65 +120,54 @@ namespace DOF2DMD
                 Run = true
             };
 
-            _queue = new Sequence(gDmdDevice);
-            _queue.FillParent = true;
+            // Initialize sequence
+            _queue = new Sequence(gDmdDevice) { FillParent = true };
 
-            //DMDScene = (Group)gDmdDevice.NewGroup("Scene");
+            // Initialize fonts
+            var fonts = InitializeFonts(gDmdDevice, grayColor);
 
-            FlexDMD.Font _scoreFontText;
-            FlexDMD.Font _scoreFontNormal;
-            FlexDMD.Font _scoreFontHighlight;
-
-            // UltraDMD uses f4by5 / f5by7 / f6by12
-            if(gDmdDevice.Height == 64 && gDmdDevice.Width == 256)
-            {
-                _scoreFontText = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f6by12.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
-                _scoreFontNormal = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f7by13.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
-                _scoreFontHighlight = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f12by24.fnt", Color.Orange, Color.Red, 1);
-            }
-            else
-            {
-            
-                _scoreFontText = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f6by12.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
-                _scoreFontNormal = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f7by13.fnt", Color.FromArgb(168, 168, 168), Color.Black,1);
-                _scoreFontHighlight = gDmdDevice.NewFont("FlexDMD.Resources.udmd-f12by24.fnt", Color.Orange, Color.Red, 1);
-            }
-
+            // Initialize scoreboard
             _scoreBoard = new ScoreBoard(
                 gDmdDevice,
-                _scoreFontNormal,
-                _scoreFontHighlight,
-                _scoreFontText
-                )
+                fonts.NormalFont,
+                fonts.HighlightFont,
+                fonts.TextFont
+            )
             { Visible = false };
 
-            
-
+            // Add actors to stage
             gDmdDevice.Stage.AddActor(_queue);
             gDmdDevice.Stage.AddActor(_scoreBoard);
 
-            // Display start picture as game marquee
+            // Set and display game marquee
             gGameMarquee = AppSettings.StartPicture;
-
-            Thread.Sleep(500);
             DisplayPicture(gGameMarquee, -1, "none");
-
-
-            // Start the http listener
-            HttpListener listener = new HttpListener();
-            listener.Prefixes.Add($"{AppSettings.UrlPrefix}/");
-            listener.Start();
-
-            Trace.WriteLine($"DOF2DMD is now listening for requests on {AppSettings.UrlPrefix}...");
-
-            Task listenTask = HandleIncomingConnections(listener);
-            listenTask.GetAwaiter().GetResult();
         }
-        
+
+        private static (FlexDMD.Font TextFont, FlexDMD.Font NormalFont, FlexDMD.Font HighlightFont) InitializeFonts(
+            FlexDMD.FlexDMD device, Color grayColor)
+        {
+            // Font configurations
+            var fontConfig = new[]
+            {
+                new { Path = "FlexDMD.Resources.udmd-f6by12.fnt", ForeColor = grayColor },
+                new { Path = "FlexDMD.Resources.udmd-f7by13.fnt", ForeColor = grayColor },
+                new { Path = "FlexDMD.Resources.udmd-f12by24.fnt", ForeColor = Color.Orange }
+            };
+
+            return (
+                TextFont: device.NewFont(fontConfig[0].Path, fontConfig[0].ForeColor, Color.Black, 1),
+                NormalFont: device.NewFont(fontConfig[1].Path, fontConfig[1].ForeColor, Color.Black, 1),
+                HighlightFont: device.NewFont(fontConfig[2].Path, fontConfig[2].ForeColor, Color.Red, 1)
+            );
+        }
+
+
+
         /// <summary>
-         /// Callback method once animation is finished.
-         /// Displays the player's score
-         /// </summary>
+        /// Callback method once animation is finished.
+        /// Displays the player's score
+        /// </summary>
         private static void AnimationTimer(object state)
         {
             _animationTimer.Dispose();
@@ -222,8 +241,7 @@ namespace DOF2DMD
             // If debug is enabled
             if (AppSettings.Debug)
             {
-                Trace.WriteLine(message);
-            }
+                Trace.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {message}");            }
         }
         public static Boolean DisplayScore(int cPlayers, int player, int score, bool sCleanbg, int credits)
         {
@@ -275,7 +293,7 @@ namespace DOF2DMD
             }
             catch (Exception ex)
             {
-                Trace.WriteLine($"  Error occurred while genering the Score Board. {ex.Message}");
+                LogIt($"  Error occurred while genering the Score Board. {ex.Message}");
                 return false;
             }
         }
@@ -288,6 +306,22 @@ namespace DOF2DMD
             {
                 if (string.IsNullOrEmpty(path))
                     return false;
+
+                // Retry if gDmdDevice is null
+                int retries = 10;
+                while (gDmdDevice == null && retries > 0)
+                {
+                    Thread.Sleep(1000);
+                    LogIt($"Retrying DMD device initialization {retries} retries left");
+                    retries--;
+                }
+
+                if (gDmdDevice == null)
+                {
+                    LogIt("DMD device initialization failed 10 retries");
+                    return false;
+                }
+
                 // Check if path is a full path or a relative path (use AppSettings.artworkPath if necessary)
                 string localPath;
                 if (Path.IsPathRooted(path))  // If the path is a full path (starts with a drive letter, e.g., G:/)
@@ -364,7 +398,7 @@ namespace DOF2DMD
             }
             catch (Exception ex)
             {
-                Trace.WriteLine($"Error occurred while fetching the image. {ex.Message}");
+                LogIt($"Error occurred while fetching the image. {ex.Message}");
                 return false;
             }
 
