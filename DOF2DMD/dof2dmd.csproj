@@ -12,6 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FuzzySharp" Version="2.0.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Ini" Version="8.0.0" />
     <PackageReference Include="System.Drawing.Common" Version="8.0.5" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
