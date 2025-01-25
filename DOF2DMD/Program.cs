@@ -28,6 +28,7 @@
 using System;
 using System.Drawing;
 using System.Net;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Diagnostics;
@@ -49,7 +50,8 @@ using System.Globalization;
 using static System.Net.Mime.MediaTypeNames;
 using FlexDMD.Properties;
 using System.Collections;
-
+using FuzzySharp;
+using FuzzySharp.SimilarityRatio;
 
 namespace DOF2DMD
 {
@@ -297,6 +299,55 @@ namespace DOF2DMD
                 return false;
             }
         }
+
+        private static string FindBestFuzzyMatch(string searchPath, List<string> validExtensions)
+        {
+            try
+            {
+                string directory = Path.GetDirectoryName(searchPath) ?? AppSettings.artworkPath;
+                string searchFileName = Path.GetFileNameWithoutExtension(searchPath);
+
+                if (!Directory.Exists(directory))
+                    return null;
+
+                // Get all files with valid extensions
+                var files = Directory.GetFiles(directory)
+                    .Where(f => validExtensions.Contains(Path.GetExtension(f).ToLower()))
+                    .ToList();
+
+                if (!files.Any())
+                    return null;
+
+                // Create a dictionary to maintain original paths
+                var fileDict = files
+                    .GroupBy(f => Path.GetFileNameWithoutExtension(f))
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.First()
+                    );
+
+                // Get the best match using FuzzySharp
+                var bestMatch = FuzzySharp.Process.ExtractOne(
+                    searchFileName,
+                    fileDict.Keys,
+                    cutoff: 65  // Minimum score threshold (0-100)
+                );
+
+                if (bestMatch != null)
+                {
+                    LogIt($"Fuzzy match found: '{bestMatch.Value}' with score: {bestMatch.Score}. Path: {fileDict[bestMatch.Value]}");
+                    return fileDict[bestMatch.Value];
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                LogIt($"Error in fuzzy matching: {ex.Message}");
+                return null;
+            }
+        }
+
         /// <summary>
         /// Displays an image or video file on the DMD device using native FlexDMD capabilities.
         /// </summary>
@@ -309,22 +360,39 @@ namespace DOF2DMD
         
                 // Validate file path and existence
                 string localPath;
-                if (Path.IsPathRooted(path))
-                {
-                    localPath = HttpUtility.UrlDecode(Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path)));
-                }
-                else
-                {
-                    localPath = HttpUtility.UrlDecode(Path.Combine(AppSettings.artworkPath, path));
-                }
-        
+                localPath = HttpUtility.UrlDecode(
+                    Path.IsPathRooted(path)
+                        ? Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path))
+                        : Path.Combine(AppSettings.artworkPath, 
+                            Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path)))
+                );
+
                 // List of possible extensions in order of priority
                 List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
         
+                // First try exact match
                 if (!FileExistsWithExtensions(localPath, extensions, out string foundExtension))
                 {
-                    LogIt($"❗ Picture not found {localPath}");
-                    return false;
+                    LogIt($"Exact match not found: {localPath}, looking for similar files...");
+                    var matchedFile = FindBestFuzzyMatch(localPath, extensions);
+                    if (!string.IsNullOrEmpty(matchedFile))
+                    {
+                        LogIt($"Found similar file: {matchedFile} instead of {localPath}");
+                        localPath = Path.Combine(
+                            Path.GetDirectoryName(matchedFile),
+                            Path.GetFileNameWithoutExtension(matchedFile)
+                        );
+                        foundExtension = Path.GetExtension(matchedFile);
+                    }
+                    else
+                    {
+                        LogIt($"❗ Picture not found {localPath}");
+                        return false;
+                    }
+                }
+                else 
+                {
+                    LogIt($"Found exact match: {localPath}");
                 }
         
                 string fullPath = localPath + foundExtension;
