@@ -251,15 +251,19 @@ namespace DOF2DMD
             gActivePlayer = player;
             gNbPlayers = cPlayers;
             gCredits = credits;
-            LogIt($"DisplayScore for player {player}: {score}");
-            DisplayScoreboard(gNbPlayers, player, gScore[1], gScore[2], gScore[3], gScore[4], "", "", sCleanbg);
-
-            if (AppSettings.ScoreDmd != 0)
+            // If gDmdDevice is not currently rendering
+            if (_queue.IsFinished())
             {
-                _scoreTimer?.Dispose();
-                _scoreTimer = new Timer(ScoreTimer, null, AppSettings.displayScoreDuration * 1000, Timeout.Infinite);
+                LogIt($"DisplayScore for player {player}: {score}");
+                DisplayScoreboard(gNbPlayers, player, gScore[1], gScore[2], gScore[3], gScore[4], "", "", sCleanbg);
+                if (AppSettings.ScoreDmd != 0)
+                {
+                    _scoreTimer?.Dispose();
+                    _scoreTimer = new Timer(ScoreTimer, null, AppSettings.displayScoreDuration * 1000, Timeout.Infinite);
+                }
             }
             return true;
+
         }
         /// <summary>
         /// Displays the Score Board on the DMD device using native FlexDMD capabilities.
