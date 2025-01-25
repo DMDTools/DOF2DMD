@@ -306,103 +306,107 @@ namespace DOF2DMD
             {
                 if (string.IsNullOrEmpty(path))
                     return false;
-
-                // Retry if gDmdDevice is null
-                int retries = 10;
-                while (gDmdDevice == null && retries > 0)
-                {
-                    Thread.Sleep(1000);
-                    LogIt($"Retrying DMD device initialization {retries} retries left");
-                    retries--;
-                }
-
-                if (gDmdDevice == null)
-                {
-                    LogIt("DMD device initialization failed 10 retries");
-                    return false;
-                }
-
-                // Check if path is a full path or a relative path (use AppSettings.artworkPath if necessary)
+        
+                // Validate file path and existence
                 string localPath;
-                if (Path.IsPathRooted(path))  // If the path is a full path (starts with a drive letter, e.g., G:/)
+                if (Path.IsPathRooted(path))
                 {
                     localPath = HttpUtility.UrlDecode(Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path)));
                 }
                 else
                 {
-                    localPath = HttpUtility.UrlDecode(Path.Combine(AppSettings.artworkPath, path));  // Relative path
+                    localPath = HttpUtility.UrlDecode(Path.Combine(AppSettings.artworkPath, path));
                 }
-
+        
                 // List of possible extensions in order of priority
                 List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
-
-                if (FileExistsWithExtensions(localPath, extensions, out string foundExtension))
+        
+                if (!FileExistsWithExtensions(localPath, extensions, out string foundExtension))
                 {
-                    string fullPath = localPath + foundExtension;
-                    string decodedFullPath = HttpUtility.UrlDecode(fullPath);
-                    bool isVideo = new List<string> { ".gif", ".avi", ".mp4" }.Contains(foundExtension.ToLower());
-                    bool isImage = new List<string> { ".png", ".jpg", ".bmp" }.Contains(foundExtension.ToLower());
-
-                    if (isVideo || isImage)
-                    {
-                        gDmdDevice.Post(() =>
-                        {
-                            gDmdDevice.Clear = true;
-
-
-                            // Liberar recursos existentes
-                            if (_queue.ChildCount >= 1)
-                            {
-                                _queue.RemoveAllScenes();
-                            }
-                            //gDmdDevice.LockRenderThread();
-                            gDmdDevice.Graphics.Clear(Color.Black);
-                            _scoreBoard.Visible = false;
-                            Actor mediaActor = isVideo ? (Actor)gDmdDevice.NewVideo("MyVideo", fullPath) : (Actor)gDmdDevice.NewImage("MyImage", fullPath);
-                            mediaActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
-
-                            // Only process if not a fixed duration (-1)
-                            if (duration > -1)
-                            {
-                                // Adjust duration for videos and images if not explicitly set
-                                // For image, set duration to infinite (-1)
-                                duration = (isVideo && duration == 0) ? ((AnimatedActor)mediaActor).Length :
-                                           (isImage && duration == 0) ? -1 : duration;
-
-                                if (isVideo)
-                                {
-                                    // Arm timer to restore to score, once animation is done playing
-                                    _animationTimer?.Dispose();
-                                    _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
-                                }
-                            }
-
-                            BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration);
-
-                            _queue.Visible = true;
-                            _queue.Enqueue(bg);
-
-
-                            //gDmdDevice.UnlockRenderThread();
-
-                        });
-
-                        LogIt($"📷Rendering {(isVideo ? "video" : "image")}: {fullPath}");
-                        return true;
-                    }
-
+                    LogIt($"❗ Picture not found {localPath}");
                     return false;
                 }
-                LogIt($"❗ Picture not found {localPath}");
-                return false;
+        
+                string fullPath = localPath + foundExtension;
+                bool isVideo = new List<string> { ".gif", ".avi", ".mp4" }.Contains(foundExtension.ToLower());
+                bool isImage = new List<string> { ".png", ".jpg", ".bmp" }.Contains(foundExtension.ToLower());
+        
+                if (!isVideo && !isImage)
+                {
+                    return false;
+                }
+        
+                // Now that we've validated everything, process the display asynchronously
+                _ = Task.Run(() =>
+                {
+                    // Check if gDmdDevice is initialized
+                    int retries = 10;
+                    while (gDmdDevice == null && retries > 0)
+                    {
+                        Thread.Sleep(1000);
+                        LogIt($"Retrying DMD device initialization {retries} retries left");
+                        retries--;
+                    }
+
+                    if (gDmdDevice == null)
+                    {
+                        LogIt("DMD device initialization failed 10 retries");
+                        return;
+                    }
+
+                    gDmdDevice.Post(() =>
+                    {
+                        gDmdDevice.Clear = true;
+        
+                        // Clear existing resources
+                        if (_queue.ChildCount >= 1)
+                        {
+                            _queue.RemoveAllScenes();
+                        }
+        
+                        gDmdDevice.Graphics.Clear(Color.Black);
+                        _scoreBoard.Visible = false;
+                        Actor mediaActor = isVideo ? 
+                            (Actor)gDmdDevice.NewVideo("MyVideo", fullPath) : 
+                            (Actor)gDmdDevice.NewImage("MyImage", fullPath);
+                        mediaActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
+        
+                        // Only process if not a fixed duration (-1)
+                        if (duration > -1)
+                        {
+                            // Adjust duration for videos and images if not explicitly set
+                            // For image, set duration to infinite (-1)
+                            duration = (isVideo && duration == 0) ? ((AnimatedActor)mediaActor).Length :
+                                       (isImage && duration == 0) ? -1 : duration;
+        
+                            if (isVideo)
+                            {
+                                // Arm timer to restore to score, once animation is done playing
+                                _animationTimer?.Dispose();
+                                _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+                            }
+                        }
+        
+                        BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration);
+        
+                        _queue.Visible = true;
+                        _queue.Enqueue(bg);
+                    });
+        
+                    LogIt($"📷Rendering {(isVideo ? "video" : "image")}: {fullPath}");
+                });
+        
+                // Return true immediately after validation, while display processing continues in background
+                return true;
             }
             catch (Exception ex)
             {
                 LogIt($"Error occurred while fetching the image. {ex.Message}");
                 return false;
             }
-
         }
+        
+
 
         private static BackgroundScene CreateBackgroundScene(FlexDMD.FlexDMD gDmdDevice, Actor mediaActor, string animation, float duration)
         {
@@ -730,20 +734,23 @@ namespace DOF2DMD
                 if (dof2dmdUrl.Contains("v1/") || dof2dmdUrl.Contains("v2/"))
                 {
                     LogIt($"Received request for {req.Url}");
-                    //sResponse = ProcessRequest(dof2dmdUrl);
                     sResponse = ProcessRequest(dof2dmdUrl);
                 }
-                // Answer is 200 OK anyhow, as it may block misbehaving processes
+                LogIt($"Response: {sResponse}");
                 resp.StatusCode = 200;
                 resp.ContentType = "text/plain";
                 resp.ContentEncoding = Encoding.UTF8;
                 byte[] responseBytes = Encoding.UTF8.GetBytes(sResponse);
                 resp.ContentLength64 = responseBytes.Length;
-                using (Stream output = resp.OutputStream)
-                {
-                    output.Write(responseBytes, 0, responseBytes.Length);
-                }
+
+                await resp.OutputStream.WriteAsync(responseBytes, 0, responseBytes.Length);
                 resp.Close();
+
+                // Exit the server if requested
+                if (sResponse=="exit")
+                {
+                    runServer = false;
+                }
             }
             gDmdDevice.Run = false;
         }
@@ -817,6 +824,23 @@ namespace DOF2DMD
             return validValues.TryGetValue(input, out var formattedInput) ? formattedInput : null;
         }
 
+        /// <summary>
+        /// Clear DMD screen
+        /// </summary>
+        private static void Blank()
+        {
+            gDmdDevice.Post(() =>
+            {
+                LogIt("Clear DMD");
+                _queue.RemoveAllScenes();
+                gDmdDevice.Graphics.Clear(Color.Black);
+                gDmdDevice.Stage.RemoveAll();
+                gDmdDevice.Stage.AddActor(_queue);
+                gDmdDevice.Stage.AddActor(_scoreBoard);
+                _scoreBoard.Visible = false;
+                if (_queue.IsFinished()) _queue.Visible = false;
+            });
+        }
 
         /// <summary>
         /// Process incoming requests
@@ -837,18 +861,7 @@ namespace DOF2DMD
                         case "blank":
                             gGameMarquee = "";
                             _loopTimer?.Dispose();
-
-                            gDmdDevice.Post(() =>
-                            {
-                                LogIt("Cancel Rendering");
-                                _queue.RemoveAllScenes();
-                                gDmdDevice.Graphics.Clear(Color.Black);
-                                gDmdDevice.Stage.RemoveAll();
-                                gDmdDevice.Stage.AddActor(_queue);
-                                gDmdDevice.Stage.AddActor(_scoreBoard);
-                                _scoreBoard.Visible = false;
-                                if (_queue.IsFinished()) _queue.Visible = false;
-                            });
+                            Blank();
                             sReturn = "Marquee cleared";
                             break;
                         case "loopstop":
@@ -856,7 +869,10 @@ namespace DOF2DMD
                             sReturn = "Scroll text stopped";
                             break;
                         case "exit":
-                            Environment.Exit(0);
+                            Blank();
+                            // Sleep 500ms
+                            Thread.Sleep(500);
+                            sReturn = "exit";
                             break;
                         case "version":
                             sReturn = "1.0";
@@ -886,13 +902,10 @@ namespace DOF2DMD
                                         for (int i = 1; i <= 4; i++)
                                             gScore[i] = 0;
                                     }
-                                    if (!DisplayPicture(picturepath, pictureduration, pictureanimation))
+                                    bool success = DisplayPicture(picturepath, pictureduration, pictureanimation);
+                                    if (!success)
                                     {
                                         sReturn = $"Picture or video not found: {picturepath}";
-                                    }
-                                    else
-                                    {
-                                        sReturn = "OK";
                                     }
                                     break;
                                 case "text":
@@ -916,11 +929,7 @@ namespace DOF2DMD
                                         loop = false; // valor predeterminado si la conversión falla
                                     }
 
-                                    if (DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop))
-                                    {
-                                        sReturn = "OK";
-                                    }
-                                    else
+                                    if (!DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop))
                                     {
                                         sReturn = "Error when displaying text";
                                     }
@@ -943,11 +952,7 @@ namespace DOF2DMD
                                         cleanbg = true; // valor predeterminado si la conversión falla
                                     }
 
-                                    if (AdvancedDisplay(advtext, advpath, advsize, advcolor, advfont, advbordercolor, advbordersize, advcleanbg, animationIn, animationOut, advtextduration))
-                                    {
-                                        sReturn = "OK";
-                                    }
-                                    else
+                                    if (!AdvancedDisplay(advtext, advpath, advsize, advcolor, advfont, advbordercolor, advbordersize, advcleanbg, animationIn, animationOut, advtextduration))
                                     {
                                         sReturn = "Error when displaying advanced scene";
                                     }
@@ -964,11 +969,7 @@ namespace DOF2DMD
                                         sCleanbg = true; // valor predeterminado si la conversión falla
                                     }
 
-                                    if (DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], sCleanbg, gCredits))
-                                    {
-                                        sReturn = "Ok";
-                                    }
-                                    else
+                                    if (!DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], sCleanbg, gCredits))
                                     {
                                         sReturn = "Error when displaying score board";
                                     }
@@ -977,11 +978,7 @@ namespace DOF2DMD
                                 case "scorebackground":
                                     //[url_prefix]/v1/display/scorebackground?path=<path>
                                     string scorebgpath = query.Get("path") ?? "";
-                                    if (DisplayScoreBackground(scorebgpath))
-                                    {
-                                        sReturn = "Ok";
-                                    }
-                                    else
+                                    if (!DisplayScoreBackground(scorebgpath))
                                     {
                                         sReturn = "Error when displaying score board background";
                                     }
