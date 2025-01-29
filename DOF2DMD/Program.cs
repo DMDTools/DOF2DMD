@@ -173,12 +173,13 @@ namespace DOF2DMD
         private static void AnimationTimer(object state)
         {
             _animationTimer.Dispose();
+            _animationTimer = null;
             if (AppSettings.ScoreDmd != 0)
             {
                 LogIt("⏱️ AnimationTimer: now display score");
                 if (gScore[gActivePlayer] > 0)
                 {
-                    DisplayScoreboard(gNbPlayers, gActivePlayer, gScore[1], gScore[2], gScore[3], gScore[4], "", "", true);
+                    DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], true, gCredits);
                 }
             }
         }
@@ -243,7 +244,8 @@ namespace DOF2DMD
             // If debug is enabled
             if (AppSettings.Debug)
             {
-                Trace.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {message}");            }
+                Trace.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {message}");
+            }
         }
         public static Boolean DisplayScore(int cPlayers, int player, int score, bool sCleanbg, int credits)
         {
@@ -251,8 +253,9 @@ namespace DOF2DMD
             gActivePlayer = player;
             gNbPlayers = cPlayers;
             gCredits = credits;
-            // If gDmdDevice is not currently rendering
-            if (_queue.IsFinished())
+            // Check if animationtimer is running, meaning that there is an ongoing animation (explosion, etc.)
+            // If there is, don't display score yet, the animationtimer will take care of it
+            if (_animationTimer == null)
             {
                 LogIt($"DisplayScore for player {player}: {score}");
                 DisplayScoreboard(gNbPlayers, player, gScore[1], gScore[2], gScore[3], gScore[4], "", "", sCleanbg);
@@ -450,12 +453,12 @@ namespace DOF2DMD
                             // For image, set duration to infinite (-1)
                             duration = (isVideo && duration == 0) ? ((AnimatedActor)mediaActor).Length :
                                        (isImage && duration == 0) ? -1 : duration;
-        
+                            
                             if (isVideo)
                             {
                                 // Arm timer to restore to score, once animation is done playing
                                 _animationTimer?.Dispose();
-                                _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+                                _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 250, Timeout.Infinite);
                             }
                         }
         
