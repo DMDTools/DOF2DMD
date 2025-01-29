@@ -152,11 +152,26 @@ namespace DOF2DMD
             // Font configurations
             var fontConfig = new[]
             {
-                new { Path = "FlexDMD.Resources.udmd-f6by12.fnt", ForeColor = grayColor },
-                new { Path = "FlexDMD.Resources.udmd-f7by13.fnt", ForeColor = grayColor },
-                new { Path = "FlexDMD.Resources.udmd-f12by24.fnt", ForeColor = Color.Orange }
+                new { Path = "", ForeColor = Color.Black } // Inicialización genérica
             };
-
+            if(gDmdDevice.Height == 64 && gDmdDevice.Width == 256)
+            {
+                fontConfig = new[]
+                {
+                    new { Path = "FlexDMD.Resources.udmd-f6by12.fnt", ForeColor = grayColor },
+                    new { Path = "FlexDMD.Resources.udmd-f7by13.fnt", ForeColor = grayColor },
+                    new { Path = "FlexDMD.Resources.udmd-f12by24.fnt", ForeColor = Color.Orange }
+                };
+            }
+            else
+            {
+                fontConfig = new[]
+                {
+                    new { Path = "FlexDMD.Resources.udmd-f4by5.fnt", ForeColor = grayColor },
+                    new { Path = "FlexDMD.Resources.udmd-f5by7.fnt", ForeColor = grayColor },
+                    new { Path = "FlexDMD.Resources.udmd-f6by12.fnt", ForeColor = Color.Orange }
+                };
+            }
             return (
                 TextFont: device.NewFont(fontConfig[0].Path, fontConfig[0].ForeColor, Color.Black, 1),
                 NormalFont: device.NewFont(fontConfig[1].Path, fontConfig[1].ForeColor, Color.Black, 1),
