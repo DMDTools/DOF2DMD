@@ -150,9 +150,13 @@ namespace DOF2DMD
             FlexDMD.FlexDMD device, Color grayColor)
         {
             // Font configurations
+            var fontConfig = new[]
+            {
+                new { Path = "", ForeColor = Color.Black } // Inicialización genérica
+            };
             if(gDmdDevice.Height == 64 && gDmdDevice.Width == 256)
             {
-                var fontConfig = new[]
+                fontConfig = new[]
                 {
                     new { Path = "FlexDMD.Resources.udmd-f6by12.fnt", ForeColor = grayColor },
                     new { Path = "FlexDMD.Resources.udmd-f7by13.fnt", ForeColor = grayColor },
@@ -161,7 +165,7 @@ namespace DOF2DMD
             }
             else
             {
-                var fontConfig = new[]
+                fontConfig = new[]
                 {
                     new { Path = "FlexDMD.Resources.udmd-f4by5.fnt", ForeColor = grayColor },
                     new { Path = "FlexDMD.Resources.udmd-f5by7.fnt", ForeColor = grayColor },
