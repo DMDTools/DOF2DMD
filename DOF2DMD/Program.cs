@@ -110,7 +110,6 @@ namespace DOF2DMD
         private static float _currentDuration;
         
         private static Timer _scoreDelayTimer;
-        private static readonly object _scoreLock = new object();
 
         static async Task Main()
         {
@@ -350,9 +349,8 @@ namespace DOF2DMD
             gCredits = credits;
             _scoreDelayTimer?.Dispose();
             
-            // Check if animationtimer is running, meaning that there is an ongoing animation (explosion, etc.)
-            // If there is, don't display score yet, the animationtimer will take care of it
-            if (_animationTimer == null)
+            // If no ongoing animation or we can display score over it
+            if (_animationTimer == null || sCleanbg == false)
             {
                 LogIt($"DisplayScore for player {player}: {score}");
                 DisplayScoreboard(gNbPlayers, player, gScore[1], gScore[2], gScore[3], gScore[4], "", "", sCleanbg);
@@ -555,7 +553,12 @@ namespace DOF2DMD
                             (Actor)gDmdDevice.NewVideo("MyVideo", fullPath) : 
                             (Actor)gDmdDevice.NewImage("MyImage", fullPath);
                         mediaActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
-        
+                        // Handle looping for GIFs when duration is -1
+                        if (isVideo && duration < 0)
+                        {
+                            LogIt($"🔄 Setting video loop to true for {fullPath}");
+                            ((AnimatedActor)mediaActor).Loop = true;
+                        }
                         _currentDuration = duration;
                         // If duration is negative - show immediately and clear the animation queue
                         if (duration < 0)
@@ -1118,7 +1121,7 @@ namespace DOF2DMD
                                     string bordersize = query.Get("bordersize") ?? "0";
                                     string animation = query.Get("animation") ?? "none";
                                     float textduration = float.TryParse(query.Get("duration"), out float tresult) ? tresult : 5.0f;
-                                    LogIt($"Text is now set to: {text} with size {size} ,color {color} ,font {font} ,border color {bordercolor}, border size {bordersize}, animation {animation} with a duration of {textduration} seconds");
+                                    LogIt($"Text is now set to: {text} with size {size}, color {color}, font {font}, border color {bordercolor}, border size {bordersize}, animation {animation} with a duration of {textduration} seconds");
                                     bool cleanbg;
                                     if (!bool.TryParse(query.Get("cleanbg"), out cleanbg))
                                     {
