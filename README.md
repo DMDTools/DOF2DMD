@@ -89,11 +89,15 @@ There are example aseprite files in [the `ingame.src` folder](/DOF2DMD/artwork/i
 
 DOF2DMD is a server listening to simple http request. Once it has started, you can use the following :
 
-- `[url_prefix]/v1/display/picture?path=<image or video path>&animation=<fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>`  
+- `[url_prefix]/v1/display/picture?path=<image or video path>&animation=<fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>&queue`  
   Display an image, gif animation or video.
   - **path**: The file path of the image or video to be displayed
-  - **duration**: If the duration is 0 in an animation/video, it will be limited to the duration of the video or animation. If the time is -1, it will be permanent
+  - **duration**:
+    - 0: picture will be displayed indefinitely, and animation will be displayed for the duration of the video or animation. 
+    - >0: picture or animation will be displayed for the specified time in seconds
+    - <0: picture or animation will be looped indefinitely
   - **animation**: The animation applied to the scene fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None
+  - **queue**: If present, the image will be queued to be displayed after the current image is finished. If not present, the current image will be replaced immediately by the new one
 - `[url_prefix]/v1/display/score?players=<number of players>&player=<active player>&score=<score>&cleanbg=<true|false>`  
   Display a score board using a layout from 1 to 4 players and credits**
   - **players**: the number of players for score layout. Optional, default 1
