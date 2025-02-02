@@ -348,13 +348,12 @@ namespace DOF2DMD
             gNbPlayers = cPlayers;
             gCredits = credits;
             _scoreDelayTimer?.Dispose();
-            
             // If no ongoing animation or we can display score over it
-            if (_animationTimer == null || sCleanbg == false)
+            if (_animationTimer == null || sCleanbg == false || _currentDuration == -1)
             {
                 LogIt($"DisplayScore for player {player}: {score}");
                 DisplayScoreboard(gNbPlayers, player, gScore[1], gScore[2], gScore[3], gScore[4], "", "", sCleanbg);
-            }
+            } 
             return true;
 
         }
@@ -575,12 +574,10 @@ namespace DOF2DMD
                         // For image, set duration to infinite (9999s)
                         duration = (isVideo && duration == 0) ? ((AnimatedActor)mediaActor).Length :
                                    (isImage && duration == 0) ? 9999 : duration;
-                        if (isVideo)
-                        {
-                            // Arm timer once animation is done playing
-                            _animationTimer?.Dispose();
-                            _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000, Timeout.Infinite);
-                        }
+
+                        // Arm timer once animation is done playing
+                        _animationTimer?.Dispose();
+                        _animationTimer = new Timer(AnimationTimer, null, (int)(duration * 1000), Timeout.Infinite);
         
                         BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration);
         
@@ -1092,7 +1089,7 @@ namespace DOF2DMD
                                     {
                                         pictureduration = -1.0f;
                                     }
-                                    if ((query.Count == 2) && (pictureduration == -1.0f) && !picturepath.Contains("mameoutput"))
+                                    if (!picturepath.Contains("mameoutput"))
                                     {
                                         // This is certainly a game marquee, provided during new game
                                         // If path corresponds to an existing file, set game marquee
@@ -1149,7 +1146,7 @@ namespace DOF2DMD
                                     string animationIn = query.Get("animationin") ?? "none";
                                     string animationOut = query.Get("animationout") ?? "none";
                                     float advtextduration = float.TryParse(query.Get("duration"), out float aresult) ? aresult : 5.0f;
-                                    LogIt($"Advanced Text is now set to: {advtext} with size {advsize} ,color {advcolor} ,font {advfont} ,border color {advbordercolor}, border size {advbordersize}, animation In {animationIn}, animation Out {animationOut} with a duration of {advtextduration} seconds");
+                                    LogIt($"Advanced Text is now set to: {advtext} with size {advsize}, color {advcolor}, font {advfont}, border color {advbordercolor}, border size {advbordersize}, animation In {animationIn}, animation Out {animationOut} with a duration of {advtextduration} seconds");
                                     bool advcleanbg;
                                     if (!bool.TryParse(query.Get("cleanbg"), out advcleanbg))
                                     {
