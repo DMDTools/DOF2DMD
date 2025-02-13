@@ -269,12 +269,7 @@ namespace DOF2DMD
                 LogIt("⏱️ DelayedScoreDisplay: delay complete, displaying score");
                 if (gScore[gActivePlayer] > 0)
                 {
-                    DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], true, gCredits);
-                }
-                if (AppSettings.ScoreDmd != 0)
-                {
-                    _scoreTimer?.Dispose();
-                    _scoreTimer = new Timer(ScoreTimer, null, AppSettings.displayScoreDuration * 1000, Timeout.Infinite);
+                    DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], false, gCredits);
                 }
             }
         }
@@ -541,17 +536,22 @@ namespace DOF2DMD
                         gDmdDevice.Clear = true;
         
                         // Clear existing resources
-                        if (_queue.ChildCount >= 1)
-                        {
-                            _queue.RemoveAllScenes();
-                        }
+                         _queue.RemoveAllScenes();
                         gDmdDevice.Graphics.Clear(Color.Black);
                         _scoreDelayTimer?.Dispose();
+                        _scoreDelayTimer = null;
                         _scoreBoard.Visible = false;
                         Actor mediaActor = isVideo ? 
                             (Actor)gDmdDevice.NewVideo("MyVideo", fullPath) : 
                             (Actor)gDmdDevice.NewImage("MyImage", fullPath);
                         mediaActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
+
+                        // Set random position if the file name contains "expl" (explosion?)
+                        if (fullPath.Contains("expl"))
+                        {
+                            mediaActor.SetPosition(new Random().Next(-1, 2) * 32, 0);
+
+                        }
                         // Handle looping for GIFs when duration is -1
                         if (isVideo && duration < 0)
                         {
@@ -1123,7 +1123,7 @@ namespace DOF2DMD
                                     if (!bool.TryParse(query.Get("cleanbg"), out cleanbg))
                                     {
                                         cleanbg = true; // valor predeterminado si la conversión falla
-                                    } 
+                                    }
                                     bool loop;
                                     if (!bool.TryParse(query.Get("loop"), out loop))
                                     {
@@ -1167,7 +1167,7 @@ namespace DOF2DMD
                                     bool sCleanbg;
                                     if (!bool.TryParse(query.Get("cleanbg"), out sCleanbg))
                                     {
-                                        sCleanbg = true; // valor predeterminado si la conversión falla
+                                        sCleanbg = false; // valor predeterminado si la conversión falla
                                     }
 
                                     if (!DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], sCleanbg, gCredits))
