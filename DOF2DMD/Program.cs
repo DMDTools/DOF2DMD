@@ -1167,7 +1167,7 @@ namespace DOF2DMD
                                     bool sCleanbg;
                                     if (!bool.TryParse(query.Get("cleanbg"), out sCleanbg))
                                     {
-                                        sCleanbg = false; // valor predeterminado si la conversión falla
+                                        sCleanbg = true; // valor predeterminado si la conversión falla
                                     }
 
                                     if (!DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], sCleanbg, gCredits))
