@@ -32,6 +32,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Diagnostics;
+using System.Reflection;
 using FlexDMD;
 using FlexDMD.Actors;
 using FlexDMD.Scenes;
@@ -62,9 +63,27 @@ namespace DOF2DMD
         public static int gActivePlayer = 1;
         public static int gNbPlayers = 1;
         public static int gCredits = 1;
+        private static readonly object gGameMarqueeLock = new object();
         public static string gGameMarquee = "DOF2DMD";
+        // Getter
+        public static string GetGameMarquee()
+        {
+            lock (gGameMarqueeLock)
+            {
+                return gGameMarquee;
+            }
+        }
+
+        // Setter
+        public static void SetGameMarquee(string value)
+        {
+            lock (gGameMarqueeLock)
+            {
+                gGameMarquee = value;
+            }
+        }
         private static Timer _scoreTimer;
-        private static Timer _animationTimer;
+        private static Timer _animationTimer = null;
         private static Timer _loopTimer;
         private static readonly object _scoreQueueLock = new object();
         private static readonly object _animationQueueLock = new object();
@@ -73,16 +92,34 @@ namespace DOF2DMD
 
 
         public static ScoreBoard _scoreBoard;
+        // Animation item for the queue
+        private class QueueItem
+        {
+            public string Path { get; set; }
+            public float Duration { get; set; } 
+            public string Animation { get; set; }
+
+            public QueueItem(string path, float duration, string animation)
+            {
+                Path = path;
+                Duration = duration;
+                Animation = animation;
+            }
+        }
+        private static Queue<QueueItem> _animationQueue = new Queue<QueueItem>();
+        private static float _currentDuration;
+        
+        private static Timer _scoreDelayTimer;
 
         static async Task Main()
         {
             // Set up logging to a file
+            Console.OutputEncoding = Encoding.UTF8;
             Trace.Listeners.Add(new TextWriterTraceListener("dof2dmd.log") { TraceOutputOptions = TraceOptions.Timestamp });
             Trace.Listeners.Add(new ConsoleTraceListener());
             Trace.AutoFlush = true;
 
-            LogIt("Starting DOF2DMD...");
-            // Start the http listener first
+            LogIt($"Starting DOF2DMD v{Assembly.GetExecutingAssembly().GetName().Version}...");
             LogIt("Starting HTTP listener");
             HttpListener listener = new HttpListener();
             listener.Prefixes.Add($"{AppSettings.UrlPrefix}/");
@@ -142,8 +179,8 @@ namespace DOF2DMD
             gDmdDevice.Stage.AddActor(_scoreBoard);
 
             // Set and display game marquee
-            gGameMarquee = AppSettings.StartPicture;
-            DisplayPicture(gGameMarquee, -1, "none");
+            SetGameMarquee(AppSettings.StartPicture);
+            DisplayPicture(GetGameMarquee(), -1, "none", false);
         }
 
         private static (FlexDMD.Font TextFont, FlexDMD.Font NormalFont, FlexDMD.Font HighlightFont) InitializeFonts(
@@ -168,8 +205,8 @@ namespace DOF2DMD
                 fontConfig = new[]
                 {
                     new { Path = "FlexDMD.Resources.udmd-f4by5.fnt", ForeColor = grayColor },
-                    new { Path = "FlexDMD.Resources.udmd-f5by7.fnt", ForeColor = grayColor },
-                    new { Path = "FlexDMD.Resources.udmd-f6by12.fnt", ForeColor = Color.Orange }
+                    new { Path = "FlexDMD.Resources.udmd-f7by13.fnt", ForeColor = grayColor },
+                    new { Path = "FlexDMD.Resources.udmd-f12by24.fnt", ForeColor = Color.Orange }
                 };
             }
             return (
@@ -189,28 +226,65 @@ namespace DOF2DMD
         {
             _animationTimer.Dispose();
             _animationTimer = null;
-            if (AppSettings.ScoreDmd != 0)
+
+            // Check if there are more animations in the queue
+            if (_animationQueue.Count > 0)
             {
-                LogIt("⏱️ AnimationTimer: now display score");
-                if (gScore[gActivePlayer] > 0)
+                lock (_animationQueueLock)
                 {
-                    DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], true, gCredits);
+                    var item = _animationQueue.Dequeue();
+                    LogIt($"⏱️ ⏳AnimationTimer: animation done, I will play {item.Path} next");
+                    if (_animationQueue.Count > 0)
+                    {
+                        LogIt($"⏱️ ⏳Animation queue has now {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => i.Path))}");
+                    }
+                    else
+                    {
+                        LogIt($"⏱️ ⏳Animation queue is now empty");
+                    }
+
+                    DisplayPicture(item.Path, item.Duration, item.Animation, false);
                 }
+            }
+            else if (AppSettings.ScoreDmd != 0)
+            {
+                LogIt("⏱️ AnimationTimer: previous animation is done, no more animation queued, starting 1s delay before score");
+
+                // Dispose existing delay timer if any
+                _scoreDelayTimer?.Dispose();
+
+                // Create new timer with 1 second delay
+                _scoreDelayTimer = new Timer(DelayedScoreDisplay, null, 1000, Timeout.Infinite);
             }
         }
 
+        private static void DelayedScoreDisplay(object state)
+        {
+            _scoreDelayTimer?.Dispose();
+            _scoreDelayTimer = null;
+
+            // Check if we still want to display the score (no new animations queued)
+            if (_animationQueue.Count == 0 && AppSettings.ScoreDmd != 0)
+            {
+                LogIt("⏱️ DelayedScoreDisplay: delay complete, displaying score");
+                if (gScore[gActivePlayer] > 0)
+                {
+                    DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], false, gCredits);
+                }
+            }
+        }
         /// <summary>
         /// This method is a callback for a timer that displays the current score.
         /// It then calls the DisplayPicture method to show the game marquee picture.
         /// </summary>
         private static void ScoreTimer(object state)
         {
-            LogIt("⏱️ ScoreTimer");
+            LogIt("⏱️ ScoreTimer - restore marquee");
             lock (_scoreQueueLock)
             {
                 try
                 {
-                    DisplayPicture(gGameMarquee, -1, "none");
+                    DisplayPicture(GetGameMarquee(), -1, "none", false);
                 }
                 finally
                 {
@@ -259,7 +333,7 @@ namespace DOF2DMD
             // If debug is enabled
             if (AppSettings.Debug)
             {
-                Trace.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {message}");
+                Trace.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [Thread {Thread.CurrentThread.ManagedThreadId}] {message}");
             }
         }
         public static Boolean DisplayScore(int cPlayers, int player, int score, bool sCleanbg, int credits)
@@ -268,18 +342,13 @@ namespace DOF2DMD
             gActivePlayer = player;
             gNbPlayers = cPlayers;
             gCredits = credits;
-            // Check if animationtimer is running, meaning that there is an ongoing animation (explosion, etc.)
-            // If there is, don't display score yet, the animationtimer will take care of it
-            if (_animationTimer == null)
+            _scoreDelayTimer?.Dispose();
+            // If no ongoing animation or we can display score over it
+            if (_animationTimer == null || sCleanbg == false || _currentDuration == -1)
             {
                 LogIt($"DisplayScore for player {player}: {score}");
                 DisplayScoreboard(gNbPlayers, player, gScore[1], gScore[2], gScore[3], gScore[4], "", "", sCleanbg);
-                if (AppSettings.ScoreDmd != 0)
-                {
-                    _scoreTimer?.Dispose();
-                    _scoreTimer = new Timer(ScoreTimer, null, AppSettings.displayScoreDuration * 1000, Timeout.Infinite);
-                }
-            }
+            } 
             return true;
 
         }
@@ -357,7 +426,6 @@ namespace DOF2DMD
 
                 if (bestMatch != null)
                 {
-                    LogIt($"Fuzzy match found: '{bestMatch.Value}' with score: {bestMatch.Score}. Path: {fileDict[bestMatch.Value]}");
                     return fileDict[bestMatch.Value];
                 }
 
@@ -373,7 +441,7 @@ namespace DOF2DMD
         /// <summary>
         /// Displays an image or video file on the DMD device using native FlexDMD capabilities.
         /// </summary>
-        public static bool DisplayPicture(string path, float duration, string animation)
+        public static bool DisplayPicture(string path, float duration, string animation, bool toQueue)
         {
             try
             {
@@ -389,17 +457,27 @@ namespace DOF2DMD
                             Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path)))
                 );
 
-                // List of possible extensions in order of priority
-                List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
-        
-                // First try exact match
+                // If path is gGameMarquee, then extensions are only static (no video) pictures
+                List<string> extensions = null;
+                if (path == GetGameMarquee())
+                {
+                    // List of possible extensions for a static marquee
+                    extensions = new List<string> { ".png", ".jpg", ".bmp" };
+                    LogIt($"Setting marquee to: {path}");
+                }
+                else
+                {
+                    // List of possible extensions for other
+                    extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
+                }
+
+                // Find the file to display
                 if (!FileExistsWithExtensions(localPath, extensions, out string foundExtension))
                 {
-                    LogIt($"Exact match not found: {localPath}, looking for similar files...");
                     var matchedFile = FindBestFuzzyMatch(localPath, extensions);
                     if (!string.IsNullOrEmpty(matchedFile))
                     {
-                        LogIt($"Found similar file: {matchedFile} instead of {localPath}");
+                        LogIt($"Exact match not found for {localPath}, but found {matchedFile} using fuzzy matching");
                         localPath = Path.Combine(
                             Path.GetDirectoryName(matchedFile),
                             Path.GetFileNameWithoutExtension(matchedFile)
@@ -411,10 +489,6 @@ namespace DOF2DMD
                         LogIt($"❗ Picture not found {localPath}");
                         return false;
                     }
-                }
-                else 
-                {
-                    LogIt($"Found exact match: {localPath}");
                 }
         
                 string fullPath = localPath + foundExtension;
@@ -444,46 +518,74 @@ namespace DOF2DMD
                         return;
                     }
 
+                    // If this picture needs to be queued AND there is an animation running BUT current animation is not meant to be infinite, 
+                    // then add this picture and its parameters to the animation queue. The animation timer will take care of it
+                    if (toQueue && _animationTimer != null && _currentDuration > 0)
+                    {
+                        lock (_animationQueueLock)
+                        {
+                            LogIt($"⏳Queuing {path} for display after current animation");
+                            _animationQueue.Enqueue(new QueueItem(path, duration, animation));
+                            LogIt($"⏳Queue has {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => i.Path))}");
+                            return;
+                        }
+                    }
+
                     gDmdDevice.Post(() =>
                     {
                         gDmdDevice.Clear = true;
         
                         // Clear existing resources
-                        if (_queue.ChildCount >= 1)
-                        {
-                            _queue.RemoveAllScenes();
-                        }
-        
+                         _queue.RemoveAllScenes();
                         gDmdDevice.Graphics.Clear(Color.Black);
+                        _scoreDelayTimer?.Dispose();
+                        _scoreDelayTimer = null;
                         _scoreBoard.Visible = false;
                         Actor mediaActor = isVideo ? 
                             (Actor)gDmdDevice.NewVideo("MyVideo", fullPath) : 
                             (Actor)gDmdDevice.NewImage("MyImage", fullPath);
                         mediaActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
-        
-                        // Only process if not a fixed duration (-1)
-                        if (duration > -1)
+
+                        // Set random position if the file name contains "expl" (explosion?)
+                        if (fullPath.Contains("expl"))
                         {
-                            // Adjust duration for videos and images if not explicitly set
-                            // For image, set duration to infinite (-1)
-                            duration = (isVideo && duration == 0) ? ((AnimatedActor)mediaActor).Length :
-                                       (isImage && duration == 0) ? -1 : duration;
-                            
-                            if (isVideo)
-                            {
-                                // Arm timer to restore to score, once animation is done playing
-                                _animationTimer?.Dispose();
-                                _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 250, Timeout.Infinite);
-                            }
+                            mediaActor.SetPosition(new Random().Next(-1, 2) * 32, 0);
+
                         }
+                        // Handle looping for GIFs when duration is -1
+                        if (isVideo && duration < 0)
+                        {
+                            LogIt($"🔄 Setting video loop to true for {fullPath}");
+                            ((AnimatedActor)mediaActor).Loop = true;
+                        }
+                        _currentDuration = duration;
+                        // If duration is negative - show immediately and clear the animation queue
+                        if (duration < 0)
+                        {
+                            lock (_animationQueueLock)
+                            {
+                                _animationQueue.Clear();
+                                LogIt($"⏳Animation queue cleared as duration was negative (immediate display, infinite duration)");
+                            }
+                            duration = 0;
+                        }
+
+                        // Adjust duration for videos and images if not explicitly set
+                        // For image, set duration to infinite (9999s)
+                        duration = (isVideo && duration == 0) ? ((AnimatedActor)mediaActor).Length :
+                                   (isImage && duration == 0) ? 9999 : duration;
+
+                        // Arm timer once animation is done playing
+                        _animationTimer?.Dispose();
+                        _animationTimer = new Timer(AnimationTimer, null, (int)(duration * 1000), Timeout.Infinite);
         
                         BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration);
         
                         _queue.Visible = true;
                         _queue.Enqueue(bg);
+                        LogIt($"📷Rendering {(isVideo ? $"video (duration: {duration * 1000}ms)" : "image")}: {fullPath}");
                     });
         
-                    LogIt($"📷Rendering {(isVideo ? "video" : "image")}: {fullPath}");
                 });
         
                 // Return true immediately after validation, while display processing continues in background
@@ -552,6 +654,7 @@ namespace DOF2DMD
                     var labelActor = (Actor)gDmdDevice.NewLabel("MyLabel", myFont, text);
 
                     gDmdDevice.Graphics.Clear(Color.Black);
+                    _scoreDelayTimer?.Dispose();
                     _scoreBoard.Visible = false;
 
                     var currentActor = new Actor();
@@ -561,7 +664,7 @@ namespace DOF2DMD
                         _loopTimer?.Dispose();
                     }
 
-                    if (duration > -1)
+                    if (duration > 0)
                     {
                         _animationTimer?.Dispose();
                         _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
@@ -734,7 +837,8 @@ namespace DOF2DMD
                     _queue.Visible = true;
                     gDmdDevice.Graphics.Clear(Color.Black);
                     _scoreBoard.Visible = false;
-                    
+                    _scoreDelayTimer?.Dispose();
+
                     // Add scene to the queue or directly to the stage
                     if (cleanbg)
                     {
@@ -826,7 +930,7 @@ namespace DOF2DMD
                     LogIt($"Received request for {req.Url}");
                     sResponse = ProcessRequest(dof2dmdUrl);
                 }
-                LogIt($"Response: {sResponse}");
+                // LogIt($"Response: {sResponse}");
                 resp.StatusCode = 200;
                 resp.ContentType = "text/plain";
                 resp.ContentEncoding = Encoding.UTF8;
@@ -923,6 +1027,7 @@ namespace DOF2DMD
             {
                 LogIt("Clear DMD");
                 _queue.RemoveAllScenes();
+                _animationQueue.Clear();
                 gDmdDevice.Graphics.Clear(Color.Black);
                 gDmdDevice.Stage.RemoveAll();
                 gDmdDevice.Stage.AddActor(_queue);
@@ -949,10 +1054,10 @@ namespace DOF2DMD
                     switch (urlParts[2])
                     {
                         case "blank":
-                            gGameMarquee = "";
+                            //gGameMarquee = "";
                             _loopTimer?.Dispose();
                             Blank();
-                            sReturn = "Marquee cleared";
+                            sReturn = "OK";
                             break;
                         case "loopstop":
                             _loopTimer?.Dispose();
@@ -976,23 +1081,29 @@ namespace DOF2DMD
                                     string pFixed = query.Get("fixed") ?? "false";
                                     float pictureduration = float.TryParse(query.Get("duration"), out float result) ? result : 0.0f;
                                     string pictureanimation = query.Get("animation") ?? "none";
+                                    bool queue;
+                                    // Check if 'queue' exists in the query parameters
+                                    queue = dof2dmdUrl.Contains("&queue") || dof2dmdUrl.EndsWith("?queue");
+
                                     if (StringComparer.OrdinalIgnoreCase.Compare(pFixed, "true") == 0)
                                     {
                                         pictureduration = -1.0f;
                                     }
-                                    if ((query.Count == 2) && (pictureduration == -1.0f))
+                                    if (!picturepath.Contains("mameoutput"))
                                     {
                                         // This is certainly a game marquee, provided during new game
                                         // If path corresponds to an existing file, set game marquee
-                                        List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
+                                        //List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
+                                        List<string> extensions = new List<string> { ".png", ".jpg", ".bmp" };
                                         if (FileExistsWithExtensions(HttpUtility.UrlDecode(AppSettings.artworkPath + "/" + picturepath), extensions, out string foundExtension)) {
-                                            gGameMarquee = picturepath;
+                                            SetGameMarquee(picturepath);
+                                            LogIt($"Setting Game Marquee to: {picturepath}");
                                         }
                                         // Reset scores for all players
                                         for (int i = 1; i <= 4; i++)
                                             gScore[i] = 0;
                                     }
-                                    bool success = DisplayPicture(picturepath, pictureduration, pictureanimation);
+                                    bool success = DisplayPicture(picturepath, pictureduration, pictureanimation, queue);
                                     if (!success)
                                     {
                                         sReturn = $"Picture or video not found: {picturepath}";
@@ -1007,12 +1118,12 @@ namespace DOF2DMD
                                     string bordersize = query.Get("bordersize") ?? "0";
                                     string animation = query.Get("animation") ?? "none";
                                     float textduration = float.TryParse(query.Get("duration"), out float tresult) ? tresult : 5.0f;
-                                    LogIt($"Text is now set to: {text} with size {size} ,color {color} ,font {font} ,border color {bordercolor}, border size {bordersize}, animation {animation} with a duration of {textduration} seconds");
+                                    LogIt($"Text is now set to: {text} with size {size}, color {color}, font {font}, border color {bordercolor}, border size {bordersize}, animation {animation} with a duration of {textduration} seconds");
                                     bool cleanbg;
                                     if (!bool.TryParse(query.Get("cleanbg"), out cleanbg))
                                     {
                                         cleanbg = true; // valor predeterminado si la conversión falla
-                                    } 
+                                    }
                                     bool loop;
                                     if (!bool.TryParse(query.Get("loop"), out loop))
                                     {
@@ -1035,7 +1146,7 @@ namespace DOF2DMD
                                     string animationIn = query.Get("animationin") ?? "none";
                                     string animationOut = query.Get("animationout") ?? "none";
                                     float advtextduration = float.TryParse(query.Get("duration"), out float aresult) ? aresult : 5.0f;
-                                    LogIt($"Advanced Text is now set to: {advtext} with size {advsize} ,color {advcolor} ,font {advfont} ,border color {advbordercolor}, border size {advbordersize}, animation In {animationIn}, animation Out {animationOut} with a duration of {advtextduration} seconds");
+                                    LogIt($"Advanced Text is now set to: {advtext} with size {advsize}, color {advcolor}, font {advfont}, border color {advbordercolor}, border size {advbordersize}, animation In {animationIn}, animation Out {animationOut} with a duration of {advtextduration} seconds");
                                     bool advcleanbg;
                                     if (!bool.TryParse(query.Get("cleanbg"), out advcleanbg))
                                     {
