@@ -492,9 +492,13 @@ namespace DOF2DMD
                 }
         
                 string fullPath = localPath + foundExtension;
+                if (localPath.Contains("&"))
+                {
+                    LogIt($"❗ Can't display picture with '&' in the name {fullPath}.\nSolution is rename the file and replace '&' by '-' in file name - see https://github.com/DMDTools/DOF2DMD/issues/27");
+                    return false;
+                }
                 bool isVideo = new List<string> { ".gif", ".avi", ".mp4" }.Contains(foundExtension.ToLower());
                 bool isImage = new List<string> { ".png", ".jpg", ".bmp" }.Contains(foundExtension.ToLower());
-        
                 if (!isVideo && !isImage)
                 {
                     return false;
@@ -534,17 +538,34 @@ namespace DOF2DMD
                     gDmdDevice.Post(() =>
                     {
                         gDmdDevice.Clear = true;
-        
-                        // Clear existing resources
-                         _queue.RemoveAllScenes();
-                        gDmdDevice.Graphics.Clear(Color.Black);
-                        _scoreDelayTimer?.Dispose();
-                        _scoreDelayTimer = null;
-                        _scoreBoard.Visible = false;
-                        Actor mediaActor = isVideo ? 
-                            (Actor)gDmdDevice.NewVideo("MyVideo", fullPath) : 
-                            (Actor)gDmdDevice.NewImage("MyImage", fullPath);
-                        mediaActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
+                        try
+                        {
+                            // Clear existing resources
+                            _queue.RemoveAllScenes();
+                            gDmdDevice.Graphics.Clear(Color.Black);
+                            _scoreDelayTimer?.Dispose();
+                            _scoreDelayTimer = null;
+                            _scoreBoard.Visible = false;
+                        }
+                        catch (Exception ex)
+                        {
+                            LogIt($"⚠️ Warning: Error while clearing resources: {ex.Message}");
+                            // Continue execution as this is not critical
+                        }
+                        Actor mediaActor;
+                        try
+                        {
+                            mediaActor = isVideo ?
+                                (Actor)gDmdDevice.NewVideo("MyVideo", fullPath) :
+                                (Actor)gDmdDevice.NewImage("MyImage", fullPath);
+
+                            mediaActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
+                        }
+                        catch (Exception ex)
+                        {
+                            LogIt($"❌ Error creating media actor: {ex.Message}");
+                            return;
+                        }
 
                         // Set random position if the file name contains "expl" (explosion?)
                         if (fullPath.Contains("expl"))
@@ -1042,6 +1063,7 @@ namespace DOF2DMD
         /// </summary>
         private static string ProcessRequest(string dof2dmdUrl)
         {
+            dof2dmdUrl = dof2dmdUrl.Replace(" & ", "%20%26%20");    // Handle cases such as "Track & Field"
             var newUrl = new Uri(dof2dmdUrl);
             var query = HttpUtility.ParseQueryString(newUrl.Query);
             string sReturn = "OK";
