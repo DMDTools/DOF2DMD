@@ -573,11 +573,13 @@ namespace DOF2DMD
                             mediaActor.SetPosition(new Random().Next(-1, 2) * 32, 0);
 
                         }
+                        
                         // Handle looping for GIFs/Videos when duration is -1
+                        bool videoLoop = false;
                         if (isVideo && duration < 0)
                         {
                             LogIt($"🔄 Setting video loop to true for {fullPath}");
-                            bool videoLoop = true;
+                            videoLoop = true;
                         }
                         _currentDuration = duration;
                         // If duration is negative - show immediately and clear the animation queue
