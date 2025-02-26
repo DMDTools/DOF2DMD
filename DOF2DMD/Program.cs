@@ -577,7 +577,7 @@ namespace DOF2DMD
                         if (isVideo && duration < 0)
                         {
                             LogIt($"🔄 Setting video loop to true for {fullPath}");
-                            ((AnimatedActor)mediaActor).Loop = true;
+                            ((AnimatedActor)mediaActor).Loop = true; //this doesn't work
                         }
                         _currentDuration = duration;
                         // If duration is negative - show immediately and clear the animation queue
@@ -599,9 +599,10 @@ namespace DOF2DMD
                         // Arm timer once animation is done playing
                         _animationTimer?.Dispose();
                         _animationTimer = new Timer(AnimationTimer, null, (int)(duration * 1000), Timeout.Infinite);
-        
-                        BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration);
-        
+                        
+                        //BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration);
+                        BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), -1);
+                        
                         _queue.Visible = true;
                         _queue.Enqueue(bg);
                         LogIt($"📷Rendering {(isVideo ? $"video (duration: {duration * 1000}ms)" : "image")}: {fullPath}");
