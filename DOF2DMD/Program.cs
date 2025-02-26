@@ -573,12 +573,14 @@ namespace DOF2DMD
                             mediaActor.SetPosition(new Random().Next(-1, 2) * 32, 0);
 
                         }
+                        /*
                         // Handle looping for GIFs when duration is -1
                         if (isVideo && duration < 0)
                         {
                             LogIt($"🔄 Setting video loop to true for {fullPath}");
-                            ((AnimatedActor)mediaActor).Loop = true; //this doesn't work
+                            ((AnimatedActor)mediaActor).Loop = true; //this doesn't work. CreateBackgroundScene uses duration=-1 for loop video/animation
                         }
+                        */
                         _currentDuration = duration;
                         // If duration is negative - show immediately and clear the animation queue
                         if (duration < 0)
@@ -588,7 +590,7 @@ namespace DOF2DMD
                                 _animationQueue.Clear();
                                 LogIt($"⏳Animation queue cleared as duration was negative (immediate display, infinite duration)");
                             }
-                            duration = 0;
+                            duration = (isVideo) ? -1 : 0;
                         }
 
                         // Adjust duration for videos and images if not explicitly set
@@ -600,9 +602,8 @@ namespace DOF2DMD
                         _animationTimer?.Dispose();
                         _animationTimer = new Timer(AnimationTimer, null, (int)(duration * 1000), Timeout.Infinite);
                         
-                        //BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration);
-                        BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), -1);
-                        
+                        BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration);
+                                                
                         _queue.Visible = true;
                         _queue.Enqueue(bg);
                         LogIt($"📷Rendering {(isVideo ? $"video (duration: {duration * 1000}ms)" : "image")}: {fullPath}");
