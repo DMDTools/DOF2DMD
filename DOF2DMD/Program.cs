@@ -573,14 +573,6 @@ namespace DOF2DMD
                             mediaActor.SetPosition(new Random().Next(-1, 2) * 32, 0);
 
                         }
-                        /*
-                        // Handle looping for GIFs when duration is -1
-                        if (isVideo && duration < 0)
-                        {
-                            LogIt($"🔄 Setting video loop to true for {fullPath}");
-                            ((AnimatedActor)mediaActor).Loop = true; //this doesn't work. CreateBackgroundScene uses duration=-1 for loop video/animation
-                        }
-                        */
                         _currentDuration = duration;
                         // If duration is negative - show immediately and clear the animation queue
                         if (duration < 0)
@@ -590,7 +582,13 @@ namespace DOF2DMD
                                 _animationQueue.Clear();
                                 LogIt($"⏳Animation queue cleared as duration was negative (immediate display, infinite duration)");
                             }
-                            duration = (isVideo) ? -1 : 0;
+                            // Handle looping for GIFs/Videos when duration is -1
+                            if (isVideo)
+                            {
+                                duration = -1;
+                                 LogIt($"🔄 Setting video loop to true for {fullPath}");
+                            }
+                            else duration = 0;
                         }
 
                         // Adjust duration for videos and images if not explicitly set
