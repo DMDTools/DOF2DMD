@@ -573,6 +573,12 @@ namespace DOF2DMD
                             mediaActor.SetPosition(new Random().Next(-1, 2) * 32, 0);
 
                         }
+                        // Handle looping for GIFs/Videos when duration is -1
+                        if (isVideo && duration < 0)
+                        {
+                            LogIt($"🔄 Setting video loop to true for {fullPath}");
+                            bool videoLoop = true;
+                        }
                         _currentDuration = duration;
                         // If duration is negative - show immediately and clear the animation queue
                         if (duration < 0)
@@ -582,13 +588,7 @@ namespace DOF2DMD
                                 _animationQueue.Clear();
                                 LogIt($"⏳Animation queue cleared as duration was negative (immediate display, infinite duration)");
                             }
-                            // Handle looping for GIFs/Videos when duration is -1
-                            if (isVideo)
-                            {
-                                duration = -1;
-                                 LogIt($"🔄 Setting video loop to true for {fullPath}");
-                            }
-                            else duration = 0;
+                            duration = 0;
                         }
 
                         // Adjust duration for videos and images if not explicitly set
@@ -599,7 +599,10 @@ namespace DOF2DMD
                         // Arm timer once animation is done playing
                         _animationTimer?.Dispose();
                         _animationTimer = new Timer(AnimationTimer, null, (int)(duration * 1000), Timeout.Infinite);
-                        
+
+                        //Check the video Loop
+                        duration = (videoLoop) ? -1 : duration;
+
                         BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration);
                                                 
                         _queue.Visible = true;
