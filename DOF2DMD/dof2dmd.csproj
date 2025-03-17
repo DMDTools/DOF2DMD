@@ -16,6 +16,8 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Ini" Version="8.0.0" />
     <PackageReference Include="System.Drawing.Common" Version="8.0.5" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.5.0" />
+    <PackageReference Include="Magick.NET-Q8-x64" Version="14.5.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -25,13 +27,13 @@
     </Reference>
   </ItemGroup>
 
-  <ItemGroup>
+<ItemGroup>
     <Content Include="DmdDevice64.dll;settings.ini;demo*.ps1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>
 
-    <Content Include="artwork/*.{png,gif};artwork/**/*;resources/**/*">
+    <Content Include="artwork/*.{png,gif,apng};artwork/**/*;resources/**/*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>
