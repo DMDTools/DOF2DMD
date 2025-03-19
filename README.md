@@ -78,6 +78,9 @@ uses [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
 ## Artwork
 
 The images and animations must be in the `artwork` folder (by default in the DOF2DMD path under the `artwork` folder).
+> [!NOTE]
+> The modified FlexDMD.dll version used in this release has animated PNG support with alpha channel (transparency) and add transparency on GIF animations too. So this enables the capability of showing multiples animated gifs/apngs at same time on the DMD with or without movement on the panel through the animation parameter like game sprites. In the case of APNG files, the new FlexDMD.dll requires ffmpeg.exe installed on your system or in the same folder where flexdmd.dll is located.
+
 
 > [!NOTE]
 > I provide a basic set of artwork, so that you can test and start editing DOFLINX's `.MAME` files.
@@ -101,8 +104,8 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
     - >0: picture or animation will be displayed for the specified time in seconds
     - <0: picture or animation will be looped indefinitely
   - **animation**: The animation applied to the scene fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|Right2Right|Right2Left|Left2Left|Left2Right|Top2Top|Top2Bottom|Bottom2Bottom|Bottom2Top|None
-    - The "Scroll<direction>" animations are smooth scrolls in the specified direction, with a total duration equal to the "duration" parameter
-    - The "<direction2direction>" animations move the image from the specified direction, stay on screen for the time specified by "duration," and then exit in the indicated direction.
+    - The "Scroll[direction>" animations are smooth scrolls in the specified direction, with a total duration equal to the "duration" parameter
+    - The "[direction2direction]" animations move the image from the specified direction, stay on screen for the time specified by "duration," and then exit in the indicated direction.
   - **queue**: If present, the image will be queued to be displayed after the current image is finished. If not present, the current image will be replaced immediately by the new one
   - **cleanbg**: Clean the active screen (when not cleaned the picture will showed over the current image/animation/text on the DMD)
 - `[url_prefix]/v1/display/score?players=<number of players>&player=<active player>&score=<score>&cleanbg=<true|false>`  
