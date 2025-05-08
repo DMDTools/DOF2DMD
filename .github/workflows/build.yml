@@ -30,7 +30,7 @@ jobs:
       # Get FlexDMD dependency
       - uses: robinraju/release-downloader@v1.10
         with:
-          repository: 'vbousquet/flexdmd'
+          repository: 'gustavoalara/flexdmd'
           fileName: 'FlexDMD.zip'
           latest: true
           extract: true

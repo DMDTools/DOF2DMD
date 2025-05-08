@@ -24,7 +24,7 @@ Here is how it looks like with an emulated DMD (using Freezy DMD extensions):
 
 ![demo](demo.gif)
 
-DOF2DMD relies on [FlexDMD](https://github.com/vbousquet/flexdmd), which itself
+DOF2DMD relies on a modified version of [FlexDMD][(https://github.com/gustavoalara/flexdmd/)], which itself
 uses [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
 
 ![Architecture](architecture.drawio.png)
@@ -55,6 +55,10 @@ uses [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
     ;Activate the autoshow of the Scoreboard or Marquee after using a call
     ;score_dmd=1
     ;marquee_dmd=1
+    ;Uses hi2txt to show game highscores, needs MAME path to read highscores (and MAME highscore plugin activated)
+    ;hi2txt_enabled=false
+    ;hi2txt_path=c:\hi2txt
+    ;mame_path=
     ; Not implemented ---
     ;scene_default=marquee
     ;number_of_dmd=1
@@ -74,6 +78,9 @@ uses [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
 ## Artwork
 
 The images and animations must be in the `artwork` folder (by default in the DOF2DMD path under the `artwork` folder).
+> [!NOTE]
+> The modified FlexDMD.dll version used in this release has animated PNG support with alpha channel (transparency) and add transparency on GIF animations too. So this enables the capability of showing multiples animated gifs/apngs at same time on the DMD with or without movement on the panel through the animation parameter like game sprites. In the case of APNG files, the new FlexDMD.dll requires ffmpeg.exe installed on your system or in the same folder where flexdmd.dll is located.
+
 
 > [!NOTE]
 > I provide a basic set of artwork, so that you can test and start editing DOFLINX's `.MAME` files.
@@ -89,34 +96,46 @@ There are example aseprite files in [the `ingame.src` folder](/DOF2DMD/artwork/i
 
 DOF2DMD is a server listening to simple http request. Once it has started, you can use the following :
 
-- `[url_prefix]/v1/display/picture?path=<image or video path>&animation=<fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>&queue`  
-  Display an image, gif animation or video.
+- `[url_prefix]/v1/display/picture?path=<image or video path>&animation=<fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>&pause=<seconds>&queue&cleanbg=<true|false>&align=<Center|TopLeft|Top|TopRight|Left|Right|BottomLeft|BottomRight>&scale=<None|Fit|Strech|Fill|FillX|FillY|StretchX|StretchY>&wait=<seconds>&xpos=[x]&ypos[y]&playspeed=<speed>`  
+  Display an image, gif/apng animation or video.
   - **path**: The file path of the image or video to be displayed
   - **duration**:
     - 0: picture will be displayed indefinitely, and animation will be displayed for the duration of the video or animation. 
     - >0: picture or animation will be displayed for the specified time in seconds
     - <0: picture or animation will be looped indefinitely
-  - **animation**: The animation applied to the scene fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None
+  - **animation**: The animation applied to the scene (Default none): fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|Right2Right|Right2Left|Left2Left|Left2Right|Top2Top|Top2Bottom|Bottom2Bottom|Bottom2Top|None
+    - The "Scroll[direction>" animations are smooth scrolls in the specified direction, with a total duration equal to the "duration" parameter
+    - The "[direction2direction]" animations smooth move the image from the specified direction to the specified direction, with a total duration equal to the "duration" parameter.
   - **queue**: If present, the image will be queued to be displayed after the current image is finished. If not present, the current image will be replaced immediately by the new one
+  - **cleanbg**: Cleans the active screen (when not cleaned the picture will showed over the current image/animation/text on the DMD). Default true
+  - **pause**: Pauses the picture on the screen during an animation (between the in an out direction of the animation). Default 0
+  - **align**: Aligns the image on the DMD (if it doesn't fit the whole panel). Default Center. <Center|TopLeft|Top|TopRight|Left|Right|BottomLeft|BottomRight>
+  - **scale**: Scales the picture on the DMD. Default Fit
+    - none: Keeps the original size of the image
+    - fit: Fits the image size to the DMD while maintaining its aspect ratio. 
+    - stretch: Stretchs the image size to the DMD whithout maintaining its aspect ratio.
+    - fill: Fills the DMD with the image
+    - fillx: Fills the DMD with the image on horizontal
+    - filly: Fills the DMD with the image on vertical
+    - stretchx: Stretchs the image to the DMD on horizontal
+    - stretchy: Stretchs the image to the DMD on vertical
+  - **wait**: waits until the image is about to be displayed on the screen. Default 0
+  - **xpos**: X pos of the picture on the DMD (if it doesn't fill the whole panel). Default 0
+  - **ypos**: X pos of the picture on the DMD (if it doesn't fill the whole panel). Default 0
+  - **playspeed**: On animated gif/png or videos change the speed of the animation. Default 1
+    
 - `[url_prefix]/v1/display/score?players=<number of players>&player=<active player>&score=<score>&cleanbg=<true|false>`  
   Display a score board using a layout from 1 to 4 players and credits**
   - **players**: the number of players for score layout. Optional, default 1
   - **player**: the highlighted player
   - **score**: The score value to be displayed for active player
   - **credits**: Credits inserted in the game. Optional
-  - **cleanbg**: Clean the active screen (when not cleaned the score will showed over the current image/animation
+  - **cleanbg**: Clean the active screen (when not cleaned the score will showed over the current image/animation/text)
 - `[url_prefix]/v1/display/scorebackground?path=<image or video path>`  
   Add an image, gif animation or video as background on the Score board. 
   - **path**: The file path of the image or video to be displayed/added to de Score Board
-- `[url_prefix]/v1/blank`
-  This endpoint clears or blanks the display
-- `[url_prefix]/v1/exit`
-  This endpoint exits or closes the application
-- `[url_prefix]/v1/version`
-  This endpoint returns the version information of the application
-- `[url_prefix]/v1/loopstop`
-  This endpoint stops an active infinite scroll text
-- `[url_prefix]/v1/display/text?text=<text>?size=XS|S|M|L|XL&color=<hex color>&font=<font>&bordercolor=<hex color>&bordersize=<0|1>&cleanbg=<true|false>&animation=<ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>&loop=<true|false>`  
+  
+- `[url_prefix]/v1/display/text?text=<text>?size=XS|S|M|L|XL&color=<hex color>&font=<font>&bordercolor=<hex color>&bordersize=<0|1>&cleanbg=<true|false>&animation=<fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>&loop=<true|false>&queue`  
   Display some text with or without animation
   - **text**: The text to be displayed (the text can be split into multiple lines using | as a separator)
   - **size**: The size of the text (Extra Small (XS), Small (S), Medium (M), Large (L) or Extra Large (XL))
@@ -125,22 +144,56 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
   - **bordercolor**: The color of the text border in hexadecimal format (for example: color=FFAAFF)
   - **bordersize**: The size of the text border (0 or 1)
   - **cleanbg**: Clean the active screen (when not cleaned the text will showed over the current image/animation
-  - **animation**: Text animation. ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None
+  - **animation**: The animation applied to the scene: fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|Right2Right|Right2Left|Left2Left|Left2Right|Top2Top|Top2Bottom|Bottom2Bottom|Bottom2Top|None
+    - The "Scroll[direction>" animations are smooth scrolls in the specified direction, with a total duration equal to the "duration" parameter
+    - The "[direction2direction]" animations smooth move the image from the specified direction to the specified direction, with a total duration equal to the "duration" parameter.
   - **duration**: time to present the text in the DMD (If an animation is selected, the screen will remain black once the animation ends if the time is longer than the animation itself. If the time is -1 in none text animation, it will be permanent, using -1 in another animation presents a black screen)
-  - **loop**: enable text scroll infinite loop
-- `[url_prefix]/v1/display/advanced?path=<image or video path>&text=<text>?size=XS|S|M|L|XL&color=<hex color>&font=<font>&bordercolor=<hex color>&bordersize=<0|1>&cleanbg=<true|false>&animationin=<FadeIn|FadeOut|ScrollOffRight|ScrollOffLeft|ScrollOnLeft|ScrollOnRight|ScrollOffUp|ScrollOffDown|ScrollOnUp|ScrollOnDown|FillFadeIn|FillFadeOut|None>&animationout=<FadeIn|FadeOut|ScrollOffRight|ScrollOffLeft|ScrollOnLeft|ScrollOnRight|ScrollOffUp|ScrollOffDown|ScrollOnUp|ScrollOnDown|FillFadeIn|FillFadeOut|None>&duration=<seconds>`  
-  Advanced display with animations. Text with or without background picture/video/animated gif or picture/video/animated gif can be used
-  - **text**: The text to be displayed (the text can be split into multiple lines using | as a separator) 
-  - **path**: The file path of the image or video to be displayed
-  - **size**: The size of the text (Extra Small (XS), Small (S), Medium (M), Large (L) or Extra Large (XL))
-  - **color**: The color of the text in hexadecimal format (for example: color=FFFFFF)
-  - **font**: The font family to be used for the text (Bitmap Font file, there are some samples on resources folder, only is needed to use the Font name before the _ simbol. For example: Matrix or BTTF)
+  - **loop**: enable text scroll infinite loop. Default false
+  - **queue**: If present, the text will be queued to be displayed after the current object on DMD is finished. If not present, the current object in the DMD will be replaced immediately by the new text
+  - **pause**: Pauses the text on the screen during an animation (between the in an out direction of the animation). Default 0
+  - **align**: Aligns the text on the DMD (if it doesn't fit the whole panel). Default Center. <Center|TopLeft|Top|TopRight|Left|Right|BottomLeft|BottomRight>
+  - **wait**: waits until the image is about to be displayed on the screen. Default 0
+
+- `[url_prefix]/v1/display/highscores?game=<gamename>?size=XS|S|M|L|XL&color=<hex color>&font=<font>&bordercolor=<hex color>&bordersize=<0|1>&cleanbg=<true|false>&animation=<ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>&loop=<true|false>&queue`  
+  Display scrolling highscores using MAME Highscores plugin 
+  - **game**: The name of the MAME hiscore game without the .hi as appears in MAME\hiscore folder 
+  - **size**: The size of the text (Extra Small (XS), Small (S), Medium (M), Large (L) or Extra Large (XL)) (Default M)
+  - **color**: The color of the text in hexadecimal format (for example: color=FFFFFF) (Default white)
+  - **font**: The font family to be used for the text (Bitmap Font file, there are some samples on resources folder, only is needed to use the Font name before the _ symbol. For example: Matrix or BTTF) (Default Consolas)
   - **bordercolor**: The color of the text border in hexadecimal format (for example: color=FFAAFF)
-  - **bordersize**: The size of the text border (0 or 1)
-  - **cleanbg**: Clean the active screen (when not cleaned the text will showed over the current image/animation
-  - **animationin**: Display animation: `FadeIn|FadeOut|ScrollOffRight|ScrollOffLeft|ScrollOnLeft|ScrollOnRight|ScrollOffUp|ScrollOffDown|ScrollOnUp|ScrollOnDown|FillFadeIn|FillFadeOut|None`
-  - **animationout**: Display animation: `FadeIn|FadeOut|ScrollOffRight|ScrollOffLeft|ScrollOnLeft|ScrollOnRight|ScrollOffUp|ScrollOffDown|ScrollOnUp|ScrollOnDown|FillFadeIn|FillFadeOut|None`
-  - **duration**: time to present the scene in the DMD (If an animation is selected, the screen will remain black once the animation ends if the time is longer than the animation itself. If the time is -1, it will be permanent)
+  - **bordersize**: The size of the text border (0 or 1) (Default 0)
+  - **cleanbg**: Clean the active screen (when not cleaned the text will showed over the current image/animation) (Default: true)
+  - **animation**: Highscore animation. ScrollUp|ScrollDown
+  - **duration**: time to present the highscore list in the DMD 
+  - **loop**: enable highscore scroll infinite loop
+  - **queue**: If present, the highscore will be queued to be displayed after the current object on DMD is finished. If not present, the current object in the DMD will be replaced immediately by the highscore
+    
+- `[url_prefix]/v1/blank`
+  This endpoint clears or blanks the display
+
+- `[url_prefix]/v1/exit`
+  This endpoint exits or closes the application
+  
+- `[url_prefix]/v1/version`
+  This endpoint returns the version information of the application
+  
+- `[url_prefix]/v1/loopstop`
+  This endpoint stops an active infinite scroll text
+## Using MAME highscores
+
+![hiscores](hiscores.gif)
+
+
+DOF2DMD now has the ability to display the MAME high score list as well. To enable this, MAME must have the Highscores plugin activated, and Hi2txt (https://greatstoneex.github.io/hi2txt-doc/) must be installed.  
+If you want to use this feature, you need to enable it in *settings.ini*, specify the path to your MAME installation, and provide the path to the *hi2txt* executable, as shown below:
+
+```ini
+hi2txt_enabled=true
+hi2txt_path=c:\hi2txt
+mame_path=C:\MAME
+```
+
+Since DOFLinx also supports MAME highscores, future releases will add DOF2DMD to send highscores from DOFLinx. So, if you prefer to have DOFLinx handle the highscores, it will not be necessary to activate them in DOF2DMD 
 
 ## Use in DOFLinx
 
